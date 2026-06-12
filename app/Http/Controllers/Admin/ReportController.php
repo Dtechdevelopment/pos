@@ -195,12 +195,12 @@ class ReportController extends Controller
             'bank_transfer' => $bankPayments,
         ];
 
-        // Per-hour breakdown for chart (SQLite compatible)
+        // Per-hour breakdown for chart (MySQL compatible)
         $hourlyData = collect(range(0, 23))->map(fn($h) => [
             'hour'  => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00',
             'sales' => Invoice::where('status', 'paid')
                 ->whereDate('created_at', $date)
-                ->whereRaw("strftime('%H', created_at) = ?", [str_pad($h, 2, '0', STR_PAD_LEFT)])
+                ->whereRaw('HOUR(created_at) = ?', [$h])
                 ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
                 ->sum('total'),
         ]);
