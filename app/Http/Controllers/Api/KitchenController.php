@@ -25,6 +25,7 @@ class KitchenController extends ApiController
         $priority = ['pending' => 1, 'preparing' => 2, 'ready' => 3, 'picked_up' => 4, 'delivered' => 5];
 
         $grouped = $all->groupBy('order_id')->map(function ($items, $orderId) use ($priority, $delayedOrderIds) {
+            $items = collect($items);
             $order = $items->first()->order;
             $sortedItems = $items->sortBy(fn($i) => $priority[$i->status] ?? 0)->values();
 
