@@ -192,6 +192,7 @@ class OrderController extends ApiController
             $order->subtotal = $newSubtotal;
             $order->tax = $newTax;
             $order->total = $newSubtotal + $newTax - $order->discount;
+            $order->status = 'sent_to_kitchen';
             $order->save();
 
             $order->load(['restaurantTable', 'waiter', 'orderItems.menuItem', 'kitchenOrders']);
