@@ -33,6 +33,8 @@ class KitchenController extends ApiController
             $leastAdvanced = $activeStatuses->min(fn($s) => $priority[$s] ?? 0);
             $overallKey = array_search($leastAdvanced, $priority);
 
+            $hasAddon = $items->contains('is_addon', 1);
+
             return [
                 'order_id' => (int) $orderId,
                 'order_number' => $order->order_number ?? 'N/A',
@@ -40,6 +42,7 @@ class KitchenController extends ApiController
                 'waiter_name' => $order->waiter?->name ?? '',
                 'item_count' => $items->count(),
                 'is_delayed' => in_array($orderId, $delayedOrderIds),
+                'is_addon_order' => $hasAddon,
                 'overall_status' => $overallKey,
                 'items' => $sortedItems->map(fn($item) => [
                     'id' => $item->id,
@@ -47,6 +50,7 @@ class KitchenController extends ApiController
                     'quantity' => $item->quantity,
                     'status' => $item->status,
                     'notes' => $item->notes,
+                    'is_addon' => (bool) $item->is_addon,
                     'started_at' => $item->started_at?->toISOString(),
                     'completed_at' => $item->completed_at?->toISOString(),
                     'chef_name' => $item->chef?->name,

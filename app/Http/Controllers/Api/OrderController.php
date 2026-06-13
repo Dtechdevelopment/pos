@@ -180,6 +180,7 @@ class OrderController extends ApiController
                 $kitchenOrder->quantity = $item['quantity'];
                 $kitchenOrder->status = 'pending';
                 $kitchenOrder->notes = $item['notes'] ?? null;
+                $kitchenOrder->is_addon = true;
                 $kitchenOrder->save();
             }
 
