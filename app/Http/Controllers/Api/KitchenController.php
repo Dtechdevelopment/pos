@@ -13,18 +13,55 @@ class KitchenController extends ApiController
     {
         $base = KitchenOrder::with(['order.restaurantTable', 'order.waiter', 'menuItem', 'chef']);
 
-        $incoming = (clone $base)->where('status', 'pending')->latest()->get();
-        $preparing = (clone $base)->where('status', 'preparing')->latest()->get();
-        $ready = (clone $base)->where('status', 'ready')->latest()->get();
-        $delivered = (clone $base)->whereIn('status', ['delivered', 'picked_up'])->whereDate('created_at', today())->latest()->limit(20)->get();
+        $all = (clone $base)->whereIn('status', ['pending', 'preparing', 'ready'])->get();
+
         $delayed = (clone $base)->where('status', 'pending')
             ->where('created_at', '<=', now()->subMinutes(15))->get();
+        $delayedOrderIds = $delayed->pluck('order_id')->unique()->toArray();
+
+        $delivered = (clone $base)->whereIn('status', ['delivered', 'picked_up'])
+            ->whereDate('created_at', today())->latest()->limit(20)->get();
+
+        $priority = ['pending' => 1, 'preparing' => 2, 'ready' => 3, 'picked_up' => 4, 'delivered' => 5];
+
+        $grouped = $all->groupBy('order_id')->map(function ($items, $orderId) use ($priority, $delayedOrderIds) {
+            $order = $items->first()->order;
+            $sortedItems = $items->sortBy(fn($i) => $priority[$i->status] ?? 0)->values();
+
+            $activeStatuses = $items->pluck('status')->unique()->values();
+            $leastAdvanced = $activeStatuses->min(fn($s) => $priority[$s] ?? 0);
+            $overallKey = array_search($leastAdvanced, $priority);
+
+            return [
+                'order_id' => (int) $orderId,
+                'order_number' => $order->order_number ?? 'N/A',
+                'table_number' => $order->restaurantTable?->table_number ?? '?',
+                'waiter_name' => $order->waiter?->name ?? '',
+                'item_count' => $items->count(),
+                'is_delayed' => in_array($orderId, $delayedOrderIds),
+                'overall_status' => $overallKey,
+                'items' => $sortedItems->map(fn($item) => [
+                    'id' => $item->id,
+                    'item_name' => $item->item_name,
+                    'quantity' => $item->quantity,
+                    'status' => $item->status,
+                    'notes' => $item->notes,
+                    'started_at' => $item->started_at?->toISOString(),
+                    'completed_at' => $item->completed_at?->toISOString(),
+                    'chef_name' => $item->chef?->name,
+                ])->values(),
+            ];
+        })->values();
+
+        $incoming = $grouped->filter(fn($g) => $g['overall_status'] === 'pending')->values();
+        $preparing = $grouped->filter(fn($g) => $g['overall_status'] === 'preparing')->values();
+        $ready = $grouped->filter(fn($g) => $g['overall_status'] === 'ready')->values();
 
         $summary = [
             'pending' => $incoming->count(),
             'preparing' => $preparing->count(),
             'ready' => $ready->count(),
-            'delayed' => $delayed->count(),
+            'delayed' => $delayedOrderIds->count(),
             'done_today' => KitchenOrder::whereIn('status', ['delivered', 'picked_up', 'cancelled'])
                 ->whereDate('created_at', today())->count(),
         ];
@@ -33,8 +70,6 @@ class KitchenController extends ApiController
             'incoming' => $incoming,
             'preparing' => $preparing,
             'ready' => $ready,
-            'delivered' => $delivered,
-            'delayed' => $delayed,
             'summary' => $summary,
         ]);
     }
