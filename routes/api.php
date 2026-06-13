@@ -113,4 +113,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         return response()->json(['fixed' => $fixed, 'total' => $orders->count()]);
     });
+
+    // One-time fix: add guest_count column to orders table
+    Route::post('/add-guest-count', function () {
+        $columns = \Illuminate\Support\Facades\DB::getSchemaBuilder()->getColumnListing('orders');
+        if (!in_array('guest_count', $columns)) {
+            \Illuminate\Support\Facades\DB::statement("ALTER TABLE orders ADD COLUMN guest_count INT NOT NULL DEFAULT 1 AFTER restaurant_table_id");
+            return response()->json(['message' => 'guest_count column added']);
+        }
+        return response()->json(['message' => 'guest_count column already exists']);
+    });
 });
