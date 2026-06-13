@@ -62,7 +62,7 @@ class KitchenController extends ApiController
             'pending' => $incoming->count(),
             'preparing' => $preparing->count(),
             'ready' => $ready->count(),
-            'delayed' => $delayedOrderIds->count(),
+            'delayed' => count($delayedOrderIds),
             'done_today' => KitchenOrder::whereIn('status', ['delivered', 'picked_up', 'cancelled'])
                 ->whereDate('created_at', today())->count(),
         ];
