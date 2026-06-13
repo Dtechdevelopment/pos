@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen']);
     Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+    Route::post('/orders/{order}/add-items', [OrderController::class, 'addItems']);
 
     // Kitchen
     Route::get('/kitchen', [KitchenController::class, 'index']);

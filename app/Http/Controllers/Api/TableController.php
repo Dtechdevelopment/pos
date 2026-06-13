@@ -23,17 +23,44 @@ class TableController extends ApiController
 
         $tables = $query->orderBy('table_number')->get();
 
-        $statusCounts = $tables->groupBy('status')->map(fn($t) => $t->count());
+        $activeStatuses = ['pending', 'sent_to_kitchen', 'preparing', 'ready', 'picked_up', 'delivered'];
+
+        $tables->each(function ($table) use ($activeStatuses) {
+            $openOrders = $table->orders()
+                ->whereIn('status', $activeStatuses)
+                ->get();
+
+            $activeGuests = $openOrders->sum('guest_count');
+            $remainingSeats = max(0, $table->capacity - $activeGuests);
+
+            $table->active_guests = $activeGuests;
+            $table->remaining_seats = $remainingSeats;
+            $table->open_orders_count = $openOrders->count();
+            $table->open_order_ids = $openOrders->pluck('id')->toArray();
+
+            if (in_array($table->status, ['reserved', 'cleaning'])) {
+                $table->computed_status = $table->status;
+            } elseif ($openOrders->isEmpty()) {
+                $table->computed_status = 'available';
+            } elseif ($remainingSeats == 0) {
+                $table->computed_status = 'full';
+            } else {
+                $table->computed_status = 'partial';
+            }
+        });
+
+        $summary = [
+            'total' => $tables->count(),
+            'available' => $tables->where('computed_status', 'available')->count(),
+            'partial' => $tables->where('computed_status', 'partial')->count(),
+            'full' => $tables->where('computed_status', 'full')->count(),
+            'reserved' => $tables->where('computed_status', 'reserved')->count(),
+            'cleaning' => $tables->where('computed_status', 'cleaning')->count(),
+        ];
 
         return $this->success([
             'tables' => $tables,
-            'summary' => [
-                'total' => $tables->count(),
-                'available' => $statusCounts['available'] ?? 0,
-                'occupied' => $statusCounts['occupied'] ?? 0,
-                'reserved' => $statusCounts['reserved'] ?? 0,
-                'maintenance' => $statusCounts['maintenance'] ?? 0,
-            ],
+            'summary' => $summary,
         ]);
     }
 
@@ -41,7 +68,31 @@ class TableController extends ApiController
     {
         $table->load('branch');
 
-        $table->loadCount(['orders as active_orders_count' => fn($q) => $q->whereIn('status', ['pending', 'sent_to_kitchen', 'preparing', 'ready'])]);
+        $activeStatuses = ['pending', 'sent_to_kitchen', 'preparing', 'ready', 'picked_up', 'delivered'];
+
+        $openOrders = $table->orders()
+            ->whereIn('status', $activeStatuses)
+            ->with(['orderItems', 'invoice'])
+            ->latest()
+            ->get();
+
+        $activeGuests = $openOrders->sum('guest_count');
+        $remainingSeats = max(0, $table->capacity - $activeGuests);
+
+        $table->active_guests = $activeGuests;
+        $table->remaining_seats = $remainingSeats;
+        $table->open_orders = $openOrders;
+        $table->open_orders_count = $openOrders->count();
+
+        if (in_array($table->status, ['reserved', 'cleaning'])) {
+            $table->computed_status = $table->status;
+        } elseif ($openOrders->isEmpty()) {
+            $table->computed_status = 'available';
+        } elseif ($remainingSeats == 0) {
+            $table->computed_status = 'full';
+        } else {
+            $table->computed_status = 'partial';
+        }
 
         return $this->success($table);
     }

@@ -55,6 +55,7 @@ class OrderController extends ApiController
     {
         $validated = $request->validate([
             'restaurant_table_id' => 'required|exists:restaurant_tables,id',
+            'guest_count' => 'required|integer|min:1',
             'customer_id' => 'nullable|exists:customers,id',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -65,6 +66,14 @@ class OrderController extends ApiController
 
         $table = \App\Models\RestaurantTable::findOrFail($validated['restaurant_table_id']);
         $branchId = $table->branch_id ?? $request->user()->branch_id;
+
+        $activeStatuses = ['pending', 'sent_to_kitchen', 'preparing', 'ready', 'picked_up', 'delivered'];
+        $activeGuests = $table->orders()->whereIn('status', $activeStatuses)->sum('guest_count');
+        $remainingSeats = $table->capacity - $activeGuests;
+
+        if ($validated['guest_count'] > $remainingSeats) {
+            return $this->error("Not enough seats. Table {$table->table_number} has {$remainingSeats} seats remaining (capacity {$table->capacity}, {$activeGuests} already in use).", 422);
+        }
 
         DB::beginTransaction();
 
@@ -88,6 +97,7 @@ class OrderController extends ApiController
             $order->order_number = $orderNumber;
             $order->branch_id = $branchId;
             $order->restaurant_table_id = $validated['restaurant_table_id'];
+            $order->guest_count = $validated['guest_count'];
             $order->waiter_id = $request->user()->id;
             $order->customer_id = $validated['customer_id'] ?? null;
             $order->subtotal = $subtotal;
@@ -130,6 +140,68 @@ class OrderController extends ApiController
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->error('Failed to create order: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function addItems(Request $request, Order $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.notes' => 'nullable|string',
+        ]);
+
+        if (in_array($order->status, ['closed', 'cancelled'])) {
+            return $this->error('Cannot add items to a closed or cancelled order.', 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($validated['items'] as $item) {
+                $menuItem = MenuItem::findOrFail($item['menu_item_id']);
+                $itemSubtotal = $menuItem->selling_price * $item['quantity'];
+
+                $orderItem = new OrderItem();
+                $orderItem->order_id = $order->id;
+                $orderItem->menu_item_id = $item['menu_item_id'];
+                $orderItem->item_name = $menuItem->name;
+                $orderItem->quantity = $item['quantity'];
+                $orderItem->unit_price = $menuItem->selling_price;
+                $orderItem->subtotal = $itemSubtotal;
+                $orderItem->notes = $item['notes'] ?? null;
+                $orderItem->save();
+
+                $kitchenOrder = new KitchenOrder();
+                $kitchenOrder->order_id = $order->id;
+                $kitchenOrder->menu_item_id = $item['menu_item_id'];
+                $kitchenOrder->item_name = $menuItem->name;
+                $kitchenOrder->quantity = $item['quantity'];
+                $kitchenOrder->status = 'pending';
+                $kitchenOrder->notes = $item['notes'] ?? null;
+                $kitchenOrder->save();
+            }
+
+            $newSubtotal = $order->orderItems()->sum('subtotal');
+            $newTax = 0;
+            $order->orderItems()->with('menuItem')->get()->each(function ($item) use (&$newTax) {
+                $newTax += $item->subtotal * ($item->menuItem->tax / 100);
+            });
+
+            $order->subtotal = $newSubtotal;
+            $order->tax = $newTax;
+            $order->total = $newSubtotal + $newTax - $order->discount;
+            $order->save();
+
+            $order->load(['restaurantTable', 'waiter', 'orderItems.menuItem', 'kitchenOrders']);
+
+            DB::commit();
+
+            return $this->success($order, 'Items added to order successfully', 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to add items: ' . $e->getMessage(), 500);
         }
     }
 
