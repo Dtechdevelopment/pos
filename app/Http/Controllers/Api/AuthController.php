@@ -50,6 +50,7 @@ class AuthController extends ApiController
                 'branch' => $user->branch ? [
                     'id' => $user->branch->id,
                     'name' => $user->branch->name,
+                    'order_method' => $user->branch->order_method ?? 'digital',
                 ] : null,
                 'roles' => $roles,
             ],
@@ -81,6 +82,7 @@ class AuthController extends ApiController
             'branch' => $user->branch ? [
                 'id' => $user->branch->id,
                 'name' => $user->branch->name,
+                'order_method' => $user->branch->order_method ?? 'digital',
             ] : null,
             'roles' => $roles,
             'permissions' => $permissions,

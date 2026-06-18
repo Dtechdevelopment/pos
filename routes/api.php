@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ReportController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -78,6 +79,46 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/financial', [ReportController::class, 'financial']);
     Route::get('/reports/reconciliation', [ReportController::class, 'reconciliation']);
 
+    // Settings
+    Route::get('/settings', function (Request $request) {
+        $branch = $request->user()->branch;
+        if (!$branch) {
+            return response()->json(['message' => 'No branch assigned'], 404);
+        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'order_method' => $branch->order_method ?? 'digital',
+            ],
+        ]);
+    });
+
+    Route::put('/settings', function (Request $request) {
+        $user = $request->user();
+        $roles = $user->getRoleNames();
+        if (!$roles->contains('super_admin') && !$roles->contains('manager') && !$roles->contains('admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'order_method' => 'required|in:digital,manual',
+        ]);
+
+        $branch = $user->branch;
+        if (!$branch) {
+            return response()->json(['message' => 'No branch assigned'], 404);
+        }
+
+        $branch->order_method = $validated['order_method'];
+        $branch->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Settings updated',
+            'data' => ['order_method' => $branch->order_method],
+        ]);
+    });
+
     // One-time fix: alter kitchen_orders status enum to include 'picked_up'
     Route::post('/alter-kitchen-status', function () {
         \Illuminate\Support\Facades\DB::statement("ALTER TABLE kitchen_orders MODIFY COLUMN status ENUM('pending','preparing','ready','picked_up','delivered','cancelled') DEFAULT 'pending'");
@@ -132,5 +173,15 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['message' => 'is_addon column added to kitchen_orders']);
         }
         return response()->json(['message' => 'is_addon column already exists']);
+    });
+
+    // One-time fix: add order_method column to branches table
+    Route::post('/add-order-method', function () {
+        $columns = \Illuminate\Support\Facades\DB::getSchemaBuilder()->getColumnListing('branches');
+        if (!in_array('order_method', $columns)) {
+            \Illuminate\Support\Facades\DB::statement("ALTER TABLE branches ADD COLUMN order_method VARCHAR(10) NOT NULL DEFAULT 'digital' AFTER status");
+            return response()->json(['message' => 'order_method column added to branches']);
+        }
+        return response()->json(['message' => 'order_method column already exists']);
     });
 });
