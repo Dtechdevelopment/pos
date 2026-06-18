@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\RestaurantTable;
+use App\Models\Invoice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -95,5 +96,37 @@ class TableController extends ApiController
         }
 
         return $this->success($table);
+    }
+
+    public function cashierTables(Request $request): JsonResponse
+    {
+        $branchId = $request->user()->branch_id;
+
+        $tables = RestaurantTable::with('branch')
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->orderBy('table_number')
+            ->get();
+
+        $result = collect();
+
+        $tables->each(function ($table) use ($result) {
+            $unpaidInvoices = Invoice::whereHas('order', function ($q) use ($table) {
+                $q->where('restaurant_table_id', $table->id);
+            })
+            ->whereIn('status', ['pending', 'draft', 'partial'])
+            ->with(['order', 'order.orderItems.menuItem'])
+            ->get();
+
+            if ($unpaidInvoices->isNotEmpty()) {
+                $table->unpaid_invoices = $unpaidInvoices;
+                $table->unpaid_total = $unpaidInvoices->sum(fn($inv) => $inv->total - $inv->paid_amount);
+                $table->unpaid_count = $unpaidInvoices->count();
+                $result->push($table);
+            }
+        });
+
+        return $this->success([
+            'tables' => $result->values(),
+        ]);
     }
 }

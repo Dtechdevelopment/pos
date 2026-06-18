@@ -163,6 +163,81 @@ class PaymentController extends ApiController
         return $this->success($payment->fresh(), 'Payment refunded successfully');
     }
 
+    public function storeCombined(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'invoice_ids' => 'required|array|min:1',
+            'invoice_ids.*' => 'exists:invoices,id',
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|in:cash,m_pesa,card,bank_transfer',
+            'reference_number' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        $invoices = Invoice::whereIn('id', $validated['invoice_ids'])
+            ->whereNotIn('status', ['paid', 'void', 'cancelled'])
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return $this->error('No valid unpaid invoices found.', 422);
+        }
+
+        $totalRemaining = $invoices->sum(fn($inv) => $inv->total - $inv->paid_amount);
+
+        if ($validated['amount'] > $totalRemaining + 0.01) {
+            return $this->error('Payment amount exceeds total remaining balance of ' . number_format($totalRemaining, 2), 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $remainingPayment = $validated['amount'];
+
+            foreach ($invoices as $invoice) {
+                if ($remainingPayment <= 0) break;
+
+                $invRemaining = $invoice->total - $invoice->paid_amount;
+                $payAmount = min($remainingPayment, $invRemaining);
+
+                $payment = new Payment();
+                $payment->invoice_id = $invoice->id;
+                $payment->branch_id = $invoice->branch_id;
+                $payment->cashier_id = $request->user()->id;
+                $payment->amount = $payAmount;
+                $payment->payment_method = $validated['payment_method'];
+                $payment->reference_number = $validated['reference_number'] ?? null;
+                $payment->status = 'completed';
+                $payment->paid_at = now();
+                $payment->notes = $validated['notes'] ?? null;
+                $payment->save();
+
+                $newPaid = $invoice->paid_amount + $payAmount;
+                $change = max(0, $newPaid - $invoice->total);
+
+                $invoice->paid_amount = $newPaid;
+                $invoice->change_amount = $change;
+                $invoice->cashier_id = $request->user()->id;
+                $invoice->status = $newPaid >= $invoice->total ? 'paid' : 'partial';
+                $invoice->save();
+
+                if ($newPaid >= $invoice->total) {
+                    $order = $invoice->order;
+                    $order->status = 'closed';
+                    $order->save();
+                }
+
+                $remainingPayment -= $payAmount;
+            }
+
+            DB::commit();
+
+            return $this->success(['message' => 'Payment recorded successfully'], 'Payment recorded successfully', 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to record payment: ' . $e->getMessage(), 500);
+        }
+    }
+
     public function dashboard(Request $request): JsonResponse
     {
         $branchId = $request->user()->branch_id;

@@ -61,10 +61,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Payments
     Route::get('/payments', [PaymentController::class, 'index']);
     Route::post('/payments', [PaymentController::class, 'store']);
+    Route::post('/payments/combined', [PaymentController::class, 'storeCombined']);
     Route::get('/payments/dashboard', [PaymentController::class, 'dashboard']);
     Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify']);
     Route::post('/payments/{payment}/reverse', [PaymentController::class, 'reverse']);
     Route::post('/payments/{payment}/refund', [PaymentController::class, 'refund']);
+
+    // Cashier
+    Route::get('/cashier/tables', [TableController::class, 'cashierTables']);
 
     // Customers
     Route::get('/customers', [CustomerController::class, 'index']);
