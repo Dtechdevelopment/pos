@@ -13,7 +13,7 @@ class BillingController extends ApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Invoice::with(['branch', 'customer', 'order', 'waiter', 'cashier']);
+        $query = Invoice::with(['branch', 'customer', 'order', 'order.restaurantTable', 'waiter', 'cashier']);
 
         $branchId = $request->user()->branch_id;
         if ($branchId) {
@@ -24,8 +24,17 @@ class BillingController extends ApiController
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('invoice_no')) {
-            $query->where('invoice_number', 'like', '%' . $request->invoice_no . '%');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('invoice_number', 'like', '%' . $search . '%')
+                  ->orWhereHas('order', function ($q2) use ($search) {
+                      $q2->where('order_number', 'like', '%' . $search . '%')
+                         ->orWhereHas('restaurantTable', function ($q3) use ($search) {
+                             $q3->where('table_number', 'like', '%' . $search . '%');
+                         });
+                  });
+            });
         }
 
         if ($request->filled('date_from')) {
@@ -36,7 +45,22 @@ class BillingController extends ApiController
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $query->latest();
+        $sort = $request->get('sort', 'newest');
+        switch ($sort) {
+            case 'oldest':
+                $query->oldest();
+                break;
+            case 'amount_high':
+                $query->orderByDesc('total');
+                break;
+            case 'amount_low':
+                $query->orderBy('total');
+                break;
+            case 'newest':
+            default:
+                $query->latest();
+                break;
+        }
 
         return $this->paginated($query);
     }
