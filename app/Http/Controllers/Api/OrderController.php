@@ -38,6 +38,19 @@ class OrderController extends ApiController
             $query->where('order_number', 'like', '%' . $request->order_no . '%');
         }
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'like', '%' . $search . '%')
+                  ->orWhereHas('restaurantTable', function ($q2) use ($search) {
+                      $q2->where('table_number', 'like', '%' . $search . '%');
+                  })
+                  ->orWhereHas('waiter', function ($q3) use ($search) {
+                      $q3->where('name', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
