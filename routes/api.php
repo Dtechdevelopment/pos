@@ -29,7 +29,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // Menu & Categories
     Route::get('/menu', [MenuController::class, 'index']);
     Route::get('/menu/{menuItem}', [MenuController::class, 'show']);
+    Route::post('/menu', [MenuController::class, 'store']);
+    Route::put('/menu/{menuItem}', [MenuController::class, 'update']);
+    Route::delete('/menu/{menuItem}', [MenuController::class, 'destroy']);
+    Route::post('/menu/{menuItem}/toggle-availability', [MenuController::class, 'toggleAvailability']);
+    Route::post('/menu/{menuItem}/toggle-active', [MenuController::class, 'toggleActive']);
+
     Route::get('/categories', [MenuController::class, 'categories']);
+    Route::post('/categories', [MenuController::class, 'storeCategory']);
+    Route::put('/categories/{category}', [MenuController::class, 'updateCategory']);
+    Route::delete('/categories/{category}', [MenuController::class, 'destroyCategory']);
 
     // Tables
     Route::get('/tables', [TableController::class, 'index']);
