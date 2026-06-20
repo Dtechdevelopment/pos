@@ -200,7 +200,7 @@ class BillingController extends ApiController
                 'description' => "Voided invoice {$invoice->invoice_number}: {$validated['reason']}",
                 'ip_address' => $request->ip(),
                 'old_values' => ['status' => $previousStatus],
-                'new_values' => ['status' => 'void', 'reason' => $validated['reason']],
+                'new_values' => ['status' => 'void', 'reason' => $validated['reason'], 'created_by' => $invoice->waiter?->name ?? $order?->waiter?->name ?? 'Unknown'],
             ]);
 
             DB::commit();

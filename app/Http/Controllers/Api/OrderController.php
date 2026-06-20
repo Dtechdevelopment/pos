@@ -324,7 +324,7 @@ class OrderController extends ApiController
                 'description' => "Cancelled order {$order->order_number}: {$validated['reason']}",
                 'ip_address' => $request->ip(),
                 'old_values' => ['status' => $previousStatus],
-                'new_values' => ['status' => 'cancelled', 'reason' => $validated['reason'], 'invoice_voided' => $invoice && $invoice->status === 'void'],
+                'new_values' => ['status' => 'cancelled', 'reason' => $validated['reason'], 'invoice_voided' => $invoice && $invoice->status === 'void', 'created_by' => $order->waiter?->name ?? 'Unknown'],
             ]);
 
             DB::commit();
