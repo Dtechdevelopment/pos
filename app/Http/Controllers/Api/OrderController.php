@@ -8,6 +8,7 @@ use App\Models\KitchenOrder;
 use App\Models\MenuItem;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -258,16 +259,71 @@ class OrderController extends ApiController
         return $this->success(null, 'Order status updated');
     }
 
-    public function cancel(Order $order): JsonResponse
+    public function cancel(Request $request, Order $order): JsonResponse
     {
-        if (in_array($order->status, ['delivered', 'closed'])) {
-            return $this->error('Cannot cancel a delivered or closed order.', 422);
+        $user = $request->user();
+        if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
+            return $this->error('Only managers can cancel orders.', 403);
         }
 
-        $order->status = 'cancelled';
-        $order->save();
+        $validated = $request->validate([
+            'reason' => 'required|string|min:3|max:500',
+        ]);
 
-        return $this->success(null, 'Order cancelled');
+        if ($order->status === 'cancelled') {
+            return $this->error('Order is already cancelled.', 422);
+        }
+
+        if ($order->status === 'closed') {
+            $invoice = $order->invoice;
+            if ($invoice && $invoice->status === 'paid') {
+                return $this->error('Cannot cancel a paid and closed order. Void the invoice and reverse payments first.', 422);
+            }
+        }
+
+        $invoice = $order->invoice;
+
+        if ($invoice && in_array($invoice->status, ['partial', 'paid'])) {
+            $activePayments = $invoice->payments()->whereIn('status', ['completed', 'verified'])->count();
+            if ($activePayments > 0) {
+                return $this->error("Invoice has {$activePayments} active payment(s). Reverse all payments before cancelling this order.", 422);
+            }
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $previousStatus = $order->status;
+
+            $order->status = 'cancelled';
+            $order->save();
+
+            $order->kitchenOrders()
+                ->whereIn('status', ['pending', 'preparing', 'ready'])
+                ->update(['status' => 'cancelled', 'completed_at' => now()]);
+
+            if ($invoice && $invoice->status === 'pending') {
+                $invoice->status = 'void';
+                $invoice->save();
+            }
+
+            AuditLog::create([
+                'user_id' => $user->id,
+                'action' => 'cancel_order',
+                'module' => 'orders',
+                'description' => "Cancelled order {$order->order_number}: {$validated['reason']}",
+                'ip_address' => $request->ip(),
+                'old_values' => ['status' => $previousStatus],
+                'new_values' => ['status' => 'cancelled', 'reason' => $validated['reason'], 'invoice_voided' => $invoice && $invoice->status === 'void'],
+            ]);
+
+            DB::commit();
+
+            return $this->success(null, 'Order cancelled successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to cancel order: ' . $e->getMessage(), 500);
+        }
     }
 
     public function summary(Request $request): JsonResponse

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -122,8 +123,17 @@ class PaymentController extends ApiController
         return $this->success($payment->fresh(), 'Payment verified successfully');
     }
 
-    public function reverse(Payment $payment): JsonResponse
+    public function reverse(Request $request, Payment $payment): JsonResponse
     {
+        $user = $request->user();
+        if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
+            return $this->error('Only managers can reverse payments.', 403);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|min:3|max:500',
+        ]);
+
         if (!in_array($payment->status, ['completed', 'verified'])) {
             return $this->error('Payment cannot be reversed.', 422);
         }
@@ -131,14 +141,38 @@ class PaymentController extends ApiController
         DB::beginTransaction();
 
         try {
+            $previousStatus = $payment->status;
+
             $payment->status = 'reversed';
             $payment->save();
 
             $invoice = $payment->invoice;
             $newPaid = $invoice->paid_amount - $payment->amount;
             $invoice->paid_amount = max(0, $newPaid);
-            $invoice->status = $newPaid <= 0 ? 'pending' : 'partial';
+            $invoice->change_amount = max(0, $invoice->change_amount - $payment->amount);
+
+            if ($invoice->paid_amount <= 0) {
+                $invoice->status = 'pending';
+
+                $order = $invoice->order;
+                if ($order && $order->status === 'closed') {
+                    $order->status = 'delivered';
+                    $order->save();
+                }
+            } else {
+                $invoice->status = 'partial';
+            }
             $invoice->save();
+
+            AuditLog::create([
+                'user_id' => $user->id,
+                'action' => 'reverse_payment',
+                'module' => 'payments',
+                'description' => "Reversed payment #{$payment->id} of \${$payment->amount} on invoice {$invoice->invoice_number}: {$validated['reason']}",
+                'ip_address' => $request->ip(),
+                'old_values' => ['payment_status' => $previousStatus, 'invoice_paid_amount' => $invoice->paid_amount + $payment->amount],
+                'new_values' => ['payment_status' => 'reversed', 'invoice_paid_amount' => $invoice->paid_amount, 'reason' => $validated['reason']],
+            ]);
 
             DB::commit();
 
@@ -149,18 +183,50 @@ class PaymentController extends ApiController
         }
     }
 
-    public function refund(Payment $payment): JsonResponse
+    public function refund(Request $request, Payment $payment): JsonResponse
     {
+        $user = $request->user();
+        if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
+            return $this->error('Only managers can refund payments.', 403);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|min:3|max:500',
+        ]);
+
         if ($payment->status !== 'completed' && $payment->status !== 'verified') {
             return $this->error('Payment cannot be refunded.', 422);
         }
 
-        $payment->status = 'refunded';
-        $payment->save();
-        $payment->invoice->status = 'refunded';
-        $payment->invoice->save();
+        DB::beginTransaction();
 
-        return $this->success($payment->fresh(), 'Payment refunded successfully');
+        try {
+            $previousStatus = $payment->status;
+
+            $payment->status = 'refunded';
+            $payment->save();
+
+            $invoice = $payment->invoice;
+            $invoice->status = 'refunded';
+            $invoice->save();
+
+            AuditLog::create([
+                'user_id' => $user->id,
+                'action' => 'refund_payment',
+                'module' => 'payments',
+                'description' => "Refunded payment #{$payment->id} of \${$payment->amount} on invoice {$invoice->invoice_number}: {$validated['reason']}",
+                'ip_address' => $request->ip(),
+                'old_values' => ['payment_status' => $previousStatus, 'invoice_status' => $invoice->status],
+                'new_values' => ['payment_status' => 'refunded', 'invoice_status' => 'refunded', 'reason' => $validated['reason']],
+            ]);
+
+            DB::commit();
+
+            return $this->success($payment->fresh(), 'Payment refunded successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to refund payment: ' . $e->getMessage(), 500);
+        }
     }
 
     public function storeCombined(Request $request): JsonResponse

@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Order;
+use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class BillingController extends ApiController
@@ -134,20 +136,70 @@ class BillingController extends ApiController
         return $this->success($invoice, 'Invoice created successfully', 201);
     }
 
-    public function void(Invoice $invoice): JsonResponse
+    public function void(Request $request, Invoice $invoice): JsonResponse
     {
+        $user = $request->user();
+        if (!$user->hasAnyRole(['super_admin', 'admin', 'manager'])) {
+            return $this->error('Only managers can void invoices.', 403);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|min:3|max:500',
+        ]);
+
         if ($invoice->status === 'void') {
             return $this->error('Invoice is already voided.', 422);
         }
 
-        if ($invoice->status === 'paid') {
-            return $this->error('Cannot void a paid invoice. Reverse the payment first.', 422);
+        if ($invoice->status === 'refunded') {
+            return $this->error('Invoice is already refunded.', 422);
         }
 
-        $invoice->status = 'void';
-        $invoice->save();
+        if ($invoice->status === 'paid') {
+            $paymentCount = $invoice->payments()->whereIn('status', ['completed', 'verified'])->count();
+            return $this->error("Invoice is fully paid with {$paymentCount} payment(s). Reverse or refund all payments before voiding.", 422);
+        }
 
-        return $this->success(null, 'Invoice voided successfully');
+        if ($invoice->status === 'partial') {
+            $paymentCount = $invoice->payments()->whereIn('status', ['completed', 'verified'])->count();
+            return $this->error("Invoice has {$paymentCount} active payment(s). Reverse all payments before voiding.", 422);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $previousStatus = $invoice->status;
+
+            $invoice->status = 'void';
+            $invoice->save();
+
+            $order = $invoice->order;
+            if ($order && $order->status !== 'cancelled') {
+                $order->status = 'cancelled';
+                $order->save();
+
+                $order->kitchenOrders()
+                    ->whereIn('status', ['pending', 'preparing', 'ready'])
+                    ->update(['status' => 'cancelled', 'completed_at' => now()]);
+            }
+
+            AuditLog::create([
+                'user_id' => $user->id,
+                'action' => 'void_invoice',
+                'module' => 'billing',
+                'description' => "Voided invoice {$invoice->invoice_number}: {$validated['reason']}",
+                'ip_address' => $request->ip(),
+                'old_values' => ['status' => $previousStatus],
+                'new_values' => ['status' => 'void', 'reason' => $validated['reason']],
+            ]);
+
+            DB::commit();
+
+            return $this->success(null, 'Invoice voided successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to void invoice: ' . $e->getMessage(), 500);
+        }
     }
 
     public function applyDiscount(Request $request, Invoice $invoice): JsonResponse

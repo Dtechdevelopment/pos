@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\KitchenController;
@@ -84,6 +85,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/customers', [CustomerController::class, 'store']);
     Route::get('/customers/{customer}', [CustomerController::class, 'show']);
     Route::put('/customers/{customer}', [CustomerController::class, 'update']);
+
+    // Audit Logs
+    Route::get('/audit-logs', [AuditController::class, 'index']);
 
     // Reports
     Route::get('/reports/sales', [ReportController::class, 'sales']);
