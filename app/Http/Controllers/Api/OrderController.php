@@ -276,6 +276,8 @@ class OrderController extends ApiController
             return $this->error('Only managers can cancel orders.', 403);
         }
 
+        $order->load('waiter');
+
         $validated = $request->validate([
             'reason' => 'required|string|min:3|max:500',
         ]);
@@ -304,6 +306,7 @@ class OrderController extends ApiController
 
         try {
             $previousStatus = $order->status;
+            $creatorName = $order->waiter?->name ?? 'Unknown';
 
             $order->status = 'cancelled';
             $order->save();
@@ -321,10 +324,10 @@ class OrderController extends ApiController
                 'user_id' => $user->id,
                 'action' => 'cancel_order',
                 'module' => 'orders',
-                'description' => "Cancelled order {$order->order_number}: {$validated['reason']}",
+                'description' => "Cancelled order {$order->order_number} (created by {$creatorName}): {$validated['reason']}",
                 'ip_address' => $request->ip(),
                 'old_values' => ['status' => $previousStatus],
-                'new_values' => ['status' => 'cancelled', 'reason' => $validated['reason'], 'invoice_voided' => $invoice && $invoice->status === 'void', 'created_by' => $order->waiter?->name ?? 'Unknown'],
+                'new_values' => ['status' => 'cancelled', 'reason' => $validated['reason'], 'invoice_voided' => $invoice && $invoice->status === 'void', 'created_by' => $creatorName],
             ]);
 
             DB::commit();

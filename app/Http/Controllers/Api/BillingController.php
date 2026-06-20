@@ -153,6 +153,8 @@ class BillingController extends ApiController
             return $this->error('Only managers can void invoices.', 403);
         }
 
+        $invoice->load(['waiter', 'order.waiter']);
+
         $validated = $request->validate([
             'reason' => 'required|string|min:3|max:500',
         ]);
@@ -179,11 +181,12 @@ class BillingController extends ApiController
 
         try {
             $previousStatus = $invoice->status;
+            $order = $invoice->order;
+            $creatorName = $invoice->waiter?->name ?? $order?->waiter?->name ?? 'Unknown';
 
             $invoice->status = 'void';
             $invoice->save();
 
-            $order = $invoice->order;
             if ($order && $order->status !== 'cancelled') {
                 $order->status = 'cancelled';
                 $order->save();
@@ -197,10 +200,10 @@ class BillingController extends ApiController
                 'user_id' => $user->id,
                 'action' => 'void_invoice',
                 'module' => 'billing',
-                'description' => "Voided invoice {$invoice->invoice_number}: {$validated['reason']}",
+                'description' => "Voided invoice {$invoice->invoice_number} (created by {$creatorName}): {$validated['reason']}",
                 'ip_address' => $request->ip(),
                 'old_values' => ['status' => $previousStatus],
-                'new_values' => ['status' => 'void', 'reason' => $validated['reason'], 'created_by' => $invoice->waiter?->name ?? $order?->waiter?->name ?? 'Unknown'],
+                'new_values' => ['status' => 'void', 'reason' => $validated['reason'], 'created_by' => $creatorName],
             ]);
 
             DB::commit();
