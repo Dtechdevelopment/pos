@@ -40,6 +40,7 @@ class KitchenController extends ApiController
                 'order_number' => $order->order_number ?? 'N/A',
                 'table_number' => $order->restaurantTable?->table_number ?? '?',
                 'waiter_name' => $order->waiter?->name ?? '',
+                'customer_name' => $order->customer_name,
                 'item_count' => $items->count(),
                 'is_delayed' => in_array($orderId, $delayedOrderIds),
                 'is_addon_order' => $hasAddon,

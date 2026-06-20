@@ -26,12 +26,17 @@ class BillingController extends ApiController
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('waiter_id')) {
+            $query->where('waiter_id', $request->waiter_id);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_number', 'like', '%' . $search . '%')
                   ->orWhereHas('order', function ($q2) use ($search) {
                       $q2->where('order_number', 'like', '%' . $search . '%')
+                         ->orWhere('customer_name', 'like', '%' . $search . '%')
                          ->orWhereHas('restaurantTable', function ($q3) use ($search) {
                              $q3->where('table_number', 'like', '%' . $search . '%');
                          });
