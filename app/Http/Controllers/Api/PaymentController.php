@@ -100,6 +100,16 @@ class PaymentController extends ApiController
 
             $payment->load(['invoice', 'cashier']);
 
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'record_payment',
+                'module' => 'payments',
+                'description' => "Recorded \${$validated['amount']} {$validated['payment_method']} payment on invoice {$invoice->invoice_number}",
+                'ip_address' => $request->ip(),
+                'old_values' => ['invoice_paid_amount' => $invoice->paid_amount],
+                'new_values' => ['payment_id' => $payment->id, 'amount' => $validated['amount'], 'method' => $validated['payment_method'], 'invoice_paid_amount' => $paidAmount, 'invoice_status' => $paidAmount >= $invoice->total ? 'paid' : 'partial'],
+            ]);
+
             DB::commit();
 
             return $this->success($payment, 'Payment recorded successfully', 201);

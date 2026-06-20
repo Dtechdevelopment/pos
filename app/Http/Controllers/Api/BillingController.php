@@ -133,6 +133,16 @@ class BillingController extends ApiController
 
         $invoice->load(['order', 'invoiceItems.menuItem']);
 
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => 'create_invoice',
+            'module' => 'billing',
+            'description' => "Created invoice {$invoiceNumber} for order {$order->order_number} (total \${$total})",
+            'ip_address' => $request->ip(),
+            'old_values' => null,
+            'new_values' => ['invoice_id' => $invoice->id, 'invoice_number' => $invoiceNumber, 'order_number' => $order->order_number, 'total' => $total],
+        ]);
+
         return $this->success($invoice, 'Invoice created successfully', 201);
     }
 

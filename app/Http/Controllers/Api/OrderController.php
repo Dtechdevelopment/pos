@@ -148,6 +148,16 @@ class OrderController extends ApiController
 
             $order->load(['restaurantTable', 'waiter', 'orderItems.menuItem']);
 
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'create_order',
+                'module' => 'orders',
+                'description' => "Created order {$orderNumber} for table {$table->table_number} ({$validated['guest_count']} guests, \${$total})",
+                'ip_address' => $request->ip(),
+                'old_values' => null,
+                'new_values' => ['order_id' => $order->id, 'order_number' => $orderNumber, 'table' => $table->table_number, 'total' => $total, 'items' => count($validated['items'])],
+            ]);
+
             DB::commit();
 
             return $this->success($order, 'Order created successfully', 201);
