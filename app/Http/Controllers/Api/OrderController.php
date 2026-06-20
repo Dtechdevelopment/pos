@@ -9,7 +9,6 @@ use App\Models\MenuItem;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\AuditLog;
-use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -73,7 +72,6 @@ class OrderController extends ApiController
             'restaurant_table_id' => 'required|exists:restaurant_tables,id',
             'guest_count' => 'required|integer|min:1',
             'customer_id' => 'nullable|exists:customers,id',
-            'customer_name' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
@@ -117,7 +115,6 @@ class OrderController extends ApiController
             $order->guest_count = $validated['guest_count'];
             $order->waiter_id = $request->user()->id;
             $order->customer_id = $validated['customer_id'] ?? null;
-            $order->customer_name = $validated['customer_name'] ?? null;
             $order->subtotal = $subtotal;
             $order->tax = $tax;
             $order->discount = 0;
@@ -125,20 +122,6 @@ class OrderController extends ApiController
             $order->status = 'pending';
             $order->notes = $validated['notes'] ?? null;
             $order->save();
-
-            if (!empty($validated['customer_name']) && empty($validated['customer_id'])) {
-                $customer = Customer::where('name', $validated['customer_name'])
-                    ->where('branch_id', $branchId)
-                    ->first();
-                if (!$customer) {
-                    $customer = Customer::create([
-                        'name' => $validated['customer_name'],
-                        'branch_id' => $branchId,
-                    ]);
-                }
-                $order->customer_id = $customer->id;
-                $order->save();
-            }
 
             foreach ($validated['items'] as $item) {
                 $menuItem = MenuItem::findOrFail($item['menu_item_id']);
