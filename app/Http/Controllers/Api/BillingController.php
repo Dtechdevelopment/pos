@@ -151,6 +151,58 @@ class BillingController extends ApiController
         return $this->success($invoice, 'Invoice created successfully', 201);
     }
 
+    public function regenerate(Request $request, Invoice $invoice): JsonResponse
+    {
+        if (in_array($invoice->status, ['paid', 'void', 'refunded'])) {
+            return $this->error('Cannot regenerate a ' . ucfirst($invoice->status) . ' invoice.', 422);
+        }
+
+        $order = Order::with('orderItems.menuItem')->findOrFail($invoice->order_id);
+
+        DB::beginTransaction();
+
+        try {
+            $invoice->invoiceItems()->delete();
+
+            foreach ($order->orderItems as $item) {
+                $invoiceItem = new InvoiceItem();
+                $invoiceItem->invoice_id = $invoice->id;
+                $invoiceItem->menu_item_id = $item->menu_item_id;
+                $invoiceItem->item_name = $item->item_name;
+                $invoiceItem->quantity = $item->quantity;
+                $invoiceItem->unit_price = $item->unit_price;
+                $invoiceItem->subtotal = $item->subtotal;
+                $invoiceItem->tax = $item->subtotal * ($item->menuItem->tax / 100);
+                $invoiceItem->save();
+            }
+
+            $invoice->subtotal = $invoice->fresh()->invoiceItems->sum('subtotal');
+            $invoice->tax = $invoice->fresh()->invoiceItems->sum('tax');
+            $invoice->total = $invoice->subtotal - ($invoice->discount ?? 0) + $invoice->tax;
+            $invoice->status = 'pending';
+            $invoice->save();
+
+            $invoice->load(['order', 'invoiceItems.menuItem']);
+
+            AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'regenerate_invoice',
+                'module' => 'billing',
+                'description' => "Regenerated invoice {$invoice->invoice_number} for order {$order->order_number} (new total \${$invoice->total})",
+                'ip_address' => $request->ip(),
+                'old_values' => null,
+                'new_values' => ['invoice_number' => $invoice->invoice_number, 'total' => $invoice->total],
+            ]);
+
+            DB::commit();
+
+            return $this->success($invoice, 'Invoice regenerated successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to regenerate invoice: ' . $e->getMessage(), 500);
+        }
+    }
+
     public function void(Request $request, Invoice $invoice): JsonResponse
     {
         $user = $request->user();

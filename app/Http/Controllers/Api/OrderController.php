@@ -276,64 +276,10 @@ class OrderController extends ApiController
         ]);
 
         $newStatus = $validated['status'];
-        $oldStatus = $order->status;
         $order->status = $newStatus;
         $order->save();
 
-        if ($newStatus === 'delivered' && $oldStatus !== 'delivered') {
-            $this->syncInvoiceOnDelivery($order);
-        }
-
         return $this->success(null, 'Order status updated');
-    }
-
-    private function syncInvoiceOnDelivery(Order $order): void
-    {
-        $invoice = $order->invoice;
-        if (!$invoice || $invoice->status === 'paid') {
-            return;
-        }
-
-        $order->load('orderItems.menuItem');
-
-        $orderQuantities = $order->orderItems->groupBy('menu_item_id')
-            ->map(fn($items) => [
-                'quantity' => $items->sum('quantity'),
-                'item' => $items->first(),
-            ]);
-
-        $invoiceQuantities = $invoice->invoiceItems->groupBy('menu_item_id')
-            ->map(fn($items) => $items->sum('quantity'));
-
-        $hasNewItems = false;
-        foreach ($orderQuantities as $menuItemId => $data) {
-            $invoicedQty = $invoiceQuantities[$menuItemId] ?? 0;
-            if ($data['quantity'] > $invoicedQty) {
-                $diff = $data['quantity'] - $invoicedQty;
-                $item = $data['item'];
-                $diffSubtotal = $item->unit_price * $diff;
-                $menuItem = $item->menuItem;
-
-                $invoiceItem = new InvoiceItem();
-                $invoiceItem->invoice_id = $invoice->id;
-                $invoiceItem->menu_item_id = $menuItemId;
-                $invoiceItem->item_name = $item->item_name;
-                $invoiceItem->quantity = $diff;
-                $invoiceItem->unit_price = $item->unit_price;
-                $invoiceItem->subtotal = $diffSubtotal;
-                $invoiceItem->tax = $diffSubtotal * ($menuItem->tax / 100);
-                $invoiceItem->save();
-                $hasNewItems = true;
-            }
-        }
-
-        if ($hasNewItems) {
-            $invoice->load('invoiceItems');
-            $invoice->subtotal = $invoice->invoiceItems->sum('subtotal');
-            $invoice->tax = $invoice->invoiceItems->sum('tax');
-            $invoice->total = $invoice->subtotal - ($invoice->discount ?? 0) + $invoice->tax;
-            $invoice->save();
-        }
     }
 
     public function cancel(Request $request, Order $order): JsonResponse
