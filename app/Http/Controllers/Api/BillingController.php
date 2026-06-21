@@ -91,7 +91,7 @@ class BillingController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
-        $order = Order::with('orderItems.menuItem')->findOrFail($validated['order_id']);
+        $order = Order::with(['orderItems.menuItem', 'restaurantTable', 'customer'])->findOrFail($validated['order_id']);
 
         if ($order->invoice) {
             return $this->error('This order already has an invoice.', 422);
@@ -99,7 +99,14 @@ class BillingController extends ApiController
 
         $branchId = $order->branch_id;
 
-        $invoiceNumber = 'INV-' . strtoupper(Str::random(8));
+        $tableNumber = $order->restaurantTable ? $this->sanitizeName($order->restaurantTable->table_number) : '0';
+        $customerName = 'WALKIN';
+        if ($order->customer && $order->customer->name) {
+            $customerName = $this->sanitizeName($order->customer->name);
+        } elseif (!empty($order->customer_name)) {
+            $customerName = $this->sanitizeName($order->customer_name);
+        }
+        $invoiceNumber = 'INV-T' . $tableNumber . '-' . $customerName . '-' . strtoupper(Str::random(4));
 
         $subtotal = $order->subtotal;
         $tax = $order->tax;
@@ -305,5 +312,11 @@ class BillingController extends ApiController
         ];
 
         return $this->success($summary);
+    }
+
+    private function sanitizeName(string $name): string
+    {
+        $clean = preg_replace('/[^a-zA-Z0-9]/', '', $name);
+        return strtoupper(substr($clean, 0, 20)) ?: 'UNKNOWN';
     }
 }

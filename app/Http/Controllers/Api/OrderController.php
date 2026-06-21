@@ -93,7 +93,8 @@ class OrderController extends ApiController
         DB::beginTransaction();
 
         try {
-            $orderNumber = 'ORD-' . strtoupper(Str::random(8));
+            $waiterName = $this->sanitizeName($request->user()->name ?? 'WAITER');
+            $orderNumber = 'ORD-' . $waiterName . '-' . strtoupper(Str::random(4));
 
             $subtotal = 0;
             $tax = 0;
@@ -376,5 +377,11 @@ class OrderController extends ApiController
         ];
 
         return $this->success($summary);
+    }
+
+    private function sanitizeName(string $name): string
+    {
+        $clean = preg_replace('/[^a-zA-Z0-9]/', '', $name);
+        return strtoupper(substr($clean, 0, 20)) ?: 'UNKNOWN';
     }
 }
