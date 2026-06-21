@@ -13,16 +13,6 @@ use Spatie\Permission\Models\Role;
 
 class SuperAdminRestaurantController extends ApiController
 {
-    public function __construct()
-    {
-        $this->middleware(function ($request, $next) {
-            if (!$request->user()->hasRole('super_admin')) {
-                return response()->json(['message' => 'Unauthorized. Super admin only.'], 403);
-            }
-            return $next($request);
-        });
-    }
-
     public function index(Request $request): JsonResponse
     {
         $query = Branch::withCount(['users', 'orders', 'invoices']);

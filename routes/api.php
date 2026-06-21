@@ -214,11 +214,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Super Admin: Restaurant Management
-    Route::get('/admin/restaurants', [SuperAdminRestaurantController::class, 'index']);
-    Route::get('/admin/restaurants/summary', [SuperAdminRestaurantController::class, 'summary']);
-    Route::post('/admin/restaurants', [SuperAdminRestaurantController::class, 'store']);
-    Route::get('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'show']);
-    Route::put('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'update']);
-    Route::post('/admin/restaurants/{restaurant}/toggle-status', [SuperAdminRestaurantController::class, 'toggleStatus']);
-    Route::delete('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'destroy']);
+    Route::middleware('role:super_admin')->group(function () {
+        Route::get('/admin/restaurants', [SuperAdminRestaurantController::class, 'index']);
+        Route::get('/admin/restaurants/summary', [SuperAdminRestaurantController::class, 'summary']);
+        Route::post('/admin/restaurants', [SuperAdminRestaurantController::class, 'store']);
+        Route::get('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'show']);
+        Route::put('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'update']);
+        Route::post('/admin/restaurants/{restaurant}/toggle-status', [SuperAdminRestaurantController::class, 'toggleStatus']);
+        Route::delete('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'destroy']);
+    });
 });
