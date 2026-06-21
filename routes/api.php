@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\SuperAdminRestaurantController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
@@ -211,4 +212,13 @@ Route::middleware('auth:sanctum')->group(function () {
         }
         return response()->json(['message' => 'order_method column already exists']);
     });
+
+    // Super Admin: Restaurant Management
+    Route::get('/admin/restaurants', [SuperAdminRestaurantController::class, 'index']);
+    Route::get('/admin/restaurants/summary', [SuperAdminRestaurantController::class, 'summary']);
+    Route::post('/admin/restaurants', [SuperAdminRestaurantController::class, 'store']);
+    Route::get('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'show']);
+    Route::put('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'update']);
+    Route::post('/admin/restaurants/{restaurant}/toggle-status', [SuperAdminRestaurantController::class, 'toggleStatus']);
+    Route::delete('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'destroy']);
 });
