@@ -316,7 +316,8 @@ class BillingController extends ApiController
 
     private function sanitizeName(string $name): string
     {
-        $clean = preg_replace('/[^a-zA-Z0-9]/', '', $name);
+        $first = explode(' ', trim($name))[0] ?? '';
+        $clean = preg_replace('/[^a-zA-Z0-9]/', '', $first);
         return strtoupper(substr($clean, 0, 20)) ?: 'UNKNOWN';
     }
 }
