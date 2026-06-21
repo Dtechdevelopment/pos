@@ -328,9 +328,10 @@ class OrderController extends ApiController
         }
 
         if ($hasNewItems) {
+            $invoice->load('invoiceItems');
             $invoice->subtotal = $invoice->invoiceItems->sum('subtotal');
             $invoice->tax = $invoice->invoiceItems->sum('tax');
-            $invoice->total = $invoice->subtotal - $invoice->discount + $invoice->tax;
+            $invoice->total = $invoice->subtotal - ($invoice->discount ?? 0) + $invoice->tax;
             $invoice->save();
         }
     }
