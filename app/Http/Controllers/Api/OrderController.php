@@ -247,7 +247,7 @@ class OrderController extends ApiController
     {
         $order->load([
             'branch', 'restaurantTable', 'waiter', 'customer',
-            'orderItems.menuItem', 'kitchenOrders.chef', 'invoice'
+            'orderItems.menuItem', 'kitchenOrders.chef', 'invoice.invoiceItems.menuItem'
         ]);
 
         return $this->success($order);
