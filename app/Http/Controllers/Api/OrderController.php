@@ -218,8 +218,14 @@ class OrderController extends ApiController
             $order->subtotal = $newSubtotal;
             $order->tax = $newTax;
             $order->total = $newSubtotal + $newTax - $order->discount;
-            $order->status = 'sent_to_kitchen';
+            $branch = $order->branch;
+            $isManual = ($branch && $branch->order_method === 'manual');
+            $order->status = $isManual ? 'ready' : 'sent_to_kitchen';
             $order->save();
+
+            if ($isManual) {
+                $order->kitchenOrders()->where('status', 'pending')->update(['status' => 'ready']);
+            }
 
             $order->load(['restaurantTable', 'waiter', 'orderItems.menuItem', 'kitchenOrders']);
 
