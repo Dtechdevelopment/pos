@@ -11,7 +11,10 @@ class KitchenController extends ApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $base = KitchenOrder::with(['order.restaurantTable', 'order.waiter', 'menuItem', 'chef']);
+        $branchId = $request->user()->branch_id;
+
+        $base = KitchenOrder::with(['order.restaurantTable', 'order.waiter', 'menuItem', 'chef'])
+            ->when($branchId, fn($q) => $q->whereHas('order', fn($q2) => $q2->where('branch_id', $branchId)));
 
         $all = (clone $base)->whereIn('status', ['pending', 'preparing', 'ready'])->get();
 
@@ -69,7 +72,9 @@ class KitchenController extends ApiController
             'ready' => $ready->count(),
             'delayed' => count($delayedOrderIds),
             'done_today' => KitchenOrder::whereIn('status', ['delivered', 'picked_up', 'cancelled'])
-                ->whereDate('created_at', today())->count(),
+                ->whereDate('created_at', today())
+                ->when($branchId, fn($q) => $q->whereHas('order', fn($q2) => $q2->where('branch_id', $branchId)))
+                ->count(),
         ];
 
         return $this->success([
