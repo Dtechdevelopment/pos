@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class SuperAdminRestaurantController extends ApiController
 {
@@ -79,7 +80,7 @@ class SuperAdminRestaurantController extends ApiController
                 'status' => 'active',
             ]);
 
-            $manager->assignRole('manager');
+            $manager->assignRole(Role::findOrCreate('manager', 'web'));
 
             $branch->loadCount(['users', 'orders', 'invoices']);
 
