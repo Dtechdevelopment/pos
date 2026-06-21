@@ -97,8 +97,18 @@ class SuperAdminRestaurantController extends ApiController
             ]);
 
             if (class_exists(Role::class)) {
-                $role = Role::findOrCreate('manager');
-                $manager->assignRole($role);
+            DB::table('roles')->insertOrIgnore([
+                'name' => 'manager',
+                'guard_name' => 'web',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::table('model_has_roles')->insert([
+                'role_id' => DB::table('roles')->where('name', 'manager')->value('id'),
+                'model_type' => User::class,
+                'model_id' => $manager->id,
+            ]);
             }
 
             $branch->loadCount(['users', 'orders', 'invoices']);
