@@ -56,12 +56,14 @@ class UserController extends ApiController
         DB::beginTransaction();
 
         try {
+            $branchId = $validated['branch_id'] ?? $request->user()->branch_id;
+
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'phone' => $validated['phone'] ?? null,
-                'branch_id' => $validated['branch_id'] ?? null,
+                'branch_id' => $branchId,
                 'status' => $validated['status'] ?? 'active',
             ]);
 
