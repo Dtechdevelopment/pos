@@ -13,8 +13,18 @@ use Spatie\Permission\Models\Role;
 
 class SuperAdminRestaurantController extends ApiController
 {
+    private function authorizeSuperAdmin(Request $request): ?JsonResponse
+    {
+        if (!$request->user() || !$request->user()->hasRole('super_admin')) {
+            return response()->json(['message' => 'Unauthorized. Super admin only.'], 403);
+        }
+        return null;
+    }
+
     public function index(Request $request): JsonResponse
     {
+        if ($denied = $this->authorizeSuperAdmin($request)) return $denied;
+
         $query = Branch::withCount(['users', 'orders', 'invoices']);
 
         if ($request->filled('search')) {
@@ -38,6 +48,8 @@ class SuperAdminRestaurantController extends ApiController
 
     public function store(Request $request): JsonResponse
     {
+        if ($denied = $this->authorizeSuperAdmin($request)) return $denied;
+
         $validated = $request->validate([
             'restaurant_name' => 'required|string|max:255',
             'restaurant_address' => 'nullable|string|max:500',
