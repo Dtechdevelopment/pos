@@ -91,7 +91,7 @@ class SuperAdminRestaurantController extends ApiController
             $manager = User::create([
                 'name' => $validated['manager_name'],
                 'email' => $validated['manager_email'],
-                'password' => Hash::make($validated['manager_password']),
+                'password' => $validated['manager_password'],
                 'branch_id' => $branch->id,
                 'status' => 'active',
             ]);

@@ -61,7 +61,7 @@ class UserController extends ApiController
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
+                'password' => $validated['password'],
                 'phone' => $validated['phone'] ?? null,
                 'branch_id' => $branchId,
                 'status' => $validated['status'] ?? 'active',
@@ -110,7 +110,7 @@ class UserController extends ApiController
             ];
 
             if (!empty($validated['password'])) {
-                $data['password'] = Hash::make($validated['password']);
+                $data['password'] = $validated['password'];
             }
 
             $user->update($data);
