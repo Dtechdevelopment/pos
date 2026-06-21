@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'address', 'phone', 'email', 'manager_name', 'status', 'order_method'])]
 class Branch extends Model
 {
+    protected $fillable = ['name', 'address', 'phone', 'email', 'manager_name', 'status', 'order_method'];
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

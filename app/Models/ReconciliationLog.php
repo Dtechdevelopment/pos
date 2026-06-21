@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['branch_id', 'reconciliation_date', 'kitchen_quantity', 'kitchen_amount', 'sales_quantity', 'sales_amount', 'paid_quantity', 'paid_amount', 'missing_items', 'missing_sales', 'pending_payments', 'notes', 'created_by'])]
 class ReconciliationLog extends Model
 {
+    protected $fillable = ['branch_id', 'reconciliation_date', 'kitchen_quantity', 'kitchen_amount', 'sales_quantity', 'sales_amount', 'paid_quantity', 'paid_amount', 'missing_items', 'missing_sales', 'pending_payments', 'notes', 'created_by'];
     protected function casts(): array
     {
         return [

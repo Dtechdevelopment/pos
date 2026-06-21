@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['invoice_number', 'order_id', 'branch_id', 'waiter_id', 'cashier_id', 'customer_id', 'subtotal', 'tax', 'discount', 'total', 'paid_amount', 'change_amount', 'status', 'notes'])]
 class Invoice extends Model
 {
+    protected $fillable = ['invoice_number', 'order_id', 'branch_id', 'waiter_id', 'cashier_id', 'customer_id', 'subtotal', 'tax', 'discount', 'total', 'paid_amount', 'change_amount', 'status', 'notes'];
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

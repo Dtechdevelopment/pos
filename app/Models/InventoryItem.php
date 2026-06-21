@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'sku', 'branch_id', 'unit', 'opening_stock', 'received_stock', 'used_stock', 'remaining_stock', 'reorder_level', 'cost_price', 'expiry_date'])]
 class InventoryItem extends Model
 {
+    protected $fillable = ['name', 'sku', 'branch_id', 'unit', 'opening_stock', 'received_stock', 'used_stock', 'remaining_stock', 'reorder_level', 'cost_price', 'expiry_date'];
     protected function casts(): array
     {
         return [

@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['category_id', 'branch_id', 'name', 'sku', 'description', 'cost_price', 'selling_price', 'tax', 'image', 'is_active', 'is_available'])]
 class MenuItem extends Model
 {
+    protected $fillable = ['category_id', 'branch_id', 'name', 'sku', 'description', 'cost_price', 'selling_price', 'tax', 'image', 'is_active', 'is_available'];
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

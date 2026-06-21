@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['order_number', 'branch_id', 'restaurant_table_id', 'guest_count', 'waiter_id', 'customer_id', 'customer_name', 'subtotal', 'tax', 'discount', 'total', 'status', 'notes'])]
 class Order extends Model
 {
+    protected $fillable = ['order_number', 'branch_id', 'restaurant_table_id', 'guest_count', 'waiter_id', 'customer_id', 'customer_name', 'subtotal', 'tax', 'discount', 'total', 'status', 'notes'];
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

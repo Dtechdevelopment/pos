@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['branch_id', 'table_number', 'capacity', 'status', 'qr_code'])]
 class RestaurantTable extends Model
 {
+    protected $fillable = ['branch_id', 'table_number', 'capacity', 'status', 'qr_code'];
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
