@@ -45,7 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Tables
     Route::get('/tables', [TableController::class, 'index']);
+    Route::post('/tables', [TableController::class, 'store']);
     Route::get('/tables/{table}', [TableController::class, 'show']);
+    Route::put('/tables/{table}', [TableController::class, 'update']);
+    Route::delete('/tables/{table}', [TableController::class, 'destroy']);
 
     // Orders
     Route::get('/orders', [OrderController::class, 'index']);

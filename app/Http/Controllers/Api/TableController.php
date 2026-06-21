@@ -65,6 +65,76 @@ class TableController extends ApiController
         ]);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'table_number' => 'required|string|max:50',
+            'capacity' => 'required|integer|min:1|max:100',
+            'status' => 'nullable|string|in:available,reserved,cleaning',
+        ]);
+
+        $branchId = $request->user()->branch_id;
+
+        $exists = RestaurantTable::where('branch_id', $branchId)
+            ->where('table_number', $validated['table_number'])
+            ->exists();
+
+        if ($exists) {
+            return $this->error('Table number already exists for this branch', 422);
+        }
+
+        $table = RestaurantTable::create([
+            'branch_id' => $branchId,
+            'table_number' => $validated['table_number'],
+            'capacity' => $validated['capacity'],
+            'status' => $validated['status'] ?? 'available',
+        ]);
+
+        return $this->success($table, 'Table created successfully', 201);
+    }
+
+    public function update(Request $request, RestaurantTable $table): JsonResponse
+    {
+        if ($table->branch_id !== $request->user()->branch_id && !$request->user()->hasRole('super_admin')) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $validated = $request->validate([
+            'table_number' => 'required|string|max:50',
+            'capacity' => 'required|integer|min:1|max:100',
+            'status' => 'nullable|string|in:available,reserved,cleaning',
+        ]);
+
+        $exists = RestaurantTable::where('branch_id', $table->branch_id)
+            ->where('table_number', $validated['table_number'])
+            ->where('id', '!=', $table->id)
+            ->exists();
+
+        if ($exists) {
+            return $this->error('Table number already exists for this branch', 422);
+        }
+
+        $table->update($validated);
+
+        return $this->success($table, 'Table updated successfully');
+    }
+
+    public function destroy(Request $request, RestaurantTable $table): JsonResponse
+    {
+        if ($table->branch_id !== $request->user()->branch_id && !$request->user()->hasRole('super_admin')) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $hasOrders = $table->orders()->whereIn('status', ['pending', 'sent_to_kitchen', 'preparing', 'ready'])->exists();
+        if ($hasOrders) {
+            return $this->error('Cannot delete table with active orders', 422);
+        }
+
+        $table->delete();
+
+        return $this->success(null, 'Table deleted successfully');
+    }
+
     public function show(RestaurantTable $table): JsonResponse
     {
         $table->load('branch');

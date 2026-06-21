@@ -15,6 +15,10 @@ class UserController extends ApiController
     {
         $query = User::with('branch', 'roles');
 
+        if (!$request->user()->hasRole('super_admin')) {
+            $query->where('branch_id', $request->user()->branch_id);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -43,13 +47,19 @@ class UserController extends ApiController
 
     public function store(Request $request): JsonResponse
     {
+        $allowedRoles = ['manager', 'waiter', 'kitchen', 'cashier'];
+        if ($request->user()->hasRole('super_admin')) {
+            $allowedRoles[] = 'admin';
+            $allowedRoles[] = 'super_admin';
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'phone' => 'nullable|string|max:20',
             'branch_id' => 'nullable|exists:branches,id',
-            'role' => 'required|string|in:super_admin,admin,manager,waiter,kitchen,cashier',
+            'role' => 'required|string|in:' . implode(',', $allowedRoles),
             'status' => 'nullable|string|in:active,inactive',
         ]);
 
@@ -57,6 +67,10 @@ class UserController extends ApiController
 
         try {
             $branchId = $validated['branch_id'] ?? $request->user()->branch_id;
+
+            if (!$request->user()->hasRole('super_admin')) {
+                $branchId = $request->user()->branch_id;
+            }
 
             $user = User::create([
                 'name' => $validated['name'],
@@ -80,21 +94,34 @@ class UserController extends ApiController
         }
     }
 
-    public function show(User $user): JsonResponse
+    public function show(Request $request, User $user): JsonResponse
     {
+        if (!$request->user()->hasRole('super_admin') && $user->branch_id !== $request->user()->branch_id) {
+            return $this->error('Unauthorized', 403);
+        }
         $user->load('branch', 'roles');
         return $this->success($user);
     }
 
     public function update(Request $request, User $user): JsonResponse
     {
+        if (!$request->user()->hasRole('super_admin') && $user->branch_id !== $request->user()->branch_id) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $allowedRoles = ['manager', 'waiter', 'kitchen', 'cashier'];
+        if ($request->user()->hasRole('super_admin')) {
+            $allowedRoles[] = 'admin';
+            $allowedRoles[] = 'super_admin';
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6',
             'phone' => 'nullable|string|max:20',
             'branch_id' => 'nullable|exists:branches,id',
-            'role' => 'required|string|in:super_admin,admin,manager,waiter,kitchen,cashier',
+            'role' => 'required|string|in:' . implode(',', $allowedRoles),
             'status' => 'nullable|string|in:active,inactive',
         ]);
 
@@ -105,9 +132,13 @@ class UserController extends ApiController
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone'] ?? null,
-                'branch_id' => $validated['branch_id'] ?? null,
+                'branch_id' => $validated['branch_id'] ?? $user->branch_id,
                 'status' => $validated['status'] ?? $user->status,
             ];
+
+            if (!$request->user()->hasRole('super_admin')) {
+                $data['branch_id'] = $request->user()->branch_id;
+            }
 
             if (!empty($validated['password'])) {
                 $data['password'] = $validated['password'];
@@ -131,6 +162,10 @@ class UserController extends ApiController
     {
         if ($user->id === $request->user()->id) {
             return $this->error('You cannot delete your own account.', 422);
+        }
+
+        if (!$request->user()->hasRole('super_admin') && $user->branch_id !== $request->user()->branch_id) {
+            return $this->error('Unauthorized', 403);
         }
 
         $user->delete();
