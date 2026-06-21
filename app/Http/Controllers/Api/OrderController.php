@@ -182,8 +182,8 @@ class OrderController extends ApiController
         }
 
         $invoice = $order->invoice;
-        if ($invoice && in_array($invoice->status, ['paid', 'void', 'refunded'])) {
-            return $this->error('Cannot add items — order has a ' . ucfirst($invoice->status) . ' invoice. Void the invoice first if changes are needed.', 422);
+        if ($invoice && $invoice->status === 'paid' && $order->status === 'closed') {
+            return $this->error('Cannot add items — order is closed and paid.', 422);
         }
 
         DB::beginTransaction();
@@ -290,7 +290,7 @@ class OrderController extends ApiController
     private function syncInvoiceOnDelivery(Order $order): void
     {
         $invoice = $order->invoice;
-        if (!$invoice || in_array($invoice->status, ['paid', 'void', 'refunded'])) {
+        if (!$invoice || $invoice->status === 'paid') {
             return;
         }
 
