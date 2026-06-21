@@ -173,6 +173,22 @@ class UserController extends ApiController
         return $this->success(null, 'User deleted successfully');
     }
 
+    public function resetPassword(Request $request, User $user): JsonResponse
+    {
+        if (!$request->user()->hasRole('super_admin') && $user->branch_id !== $request->user()->branch_id) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $validated = $request->validate([
+            'password' => 'required|string|min:6',
+        ]);
+
+        $user->password = $validated['password'];
+        $user->save();
+
+        return $this->success(null, 'Password updated successfully');
+    }
+
     public function roles(): JsonResponse
     {
         $roles = ['super_admin', 'admin', 'manager', 'waiter', 'kitchen', 'cashier'];

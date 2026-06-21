@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/{user}', [UserController::class, 'show']);
     Route::put('/users/{user}', [UserController::class, 'update']);
     Route::delete('/users/{user}', [UserController::class, 'destroy']);
+    Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
 
     // Audit Logs
     Route::get('/audit-logs', [AuditController::class, 'index']);
