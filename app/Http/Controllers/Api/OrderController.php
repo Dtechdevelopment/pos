@@ -169,6 +169,7 @@ class OrderController extends ApiController
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'branch_id' => $request->user()->branch_id,
                 'action' => 'create_order',
                 'module' => 'orders',
                 'description' => "Created order {$orderNumber} for table {$table->table_number} ({$validated['guest_count']} guests, \${$total})",
@@ -353,6 +354,7 @@ class OrderController extends ApiController
 
             AuditLog::create([
                 'user_id' => $user->id,
+                'branch_id' => $user->branch_id,
                 'action' => 'cancel_order',
                 'module' => 'orders',
                 'description' => "Cancelled order {$order->order_number} (created by {$creatorName}): {$validated['reason']}",

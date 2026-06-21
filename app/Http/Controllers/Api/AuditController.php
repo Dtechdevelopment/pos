@@ -17,6 +17,10 @@ class AuditController extends ApiController
 
         $query = AuditLog::with('user');
 
+        if (!$user->hasRole('super_admin')) {
+            $query->where('branch_id', $user->branch_id);
+        }
+
         if ($request->filled('action')) {
             $query->where('action', $request->action);
         }

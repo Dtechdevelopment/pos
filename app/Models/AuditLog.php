@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AuditLog extends Model
 {
-    protected $fillable = ['user_id', 'action', 'module', 'description', 'ip_address', 'user_agent', 'old_values', 'new_values'];
+    protected $fillable = ['user_id', 'branch_id', 'action', 'module', 'description', 'ip_address', 'user_agent', 'old_values', 'new_values'];
 
     protected function casts(): array
     {

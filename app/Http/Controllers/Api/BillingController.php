@@ -147,6 +147,7 @@ class BillingController extends ApiController
 
         AuditLog::create([
             'user_id' => $request->user()->id,
+            'branch_id' => $request->user()->branch_id,
             'action' => 'create_invoice',
             'module' => 'billing',
             'description' => "Created invoice {$invoiceNumber} for order {$order->order_number} (total \${$total})",
@@ -193,6 +194,7 @@ class BillingController extends ApiController
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'branch_id' => $request->user()->branch_id,
                 'action' => 'regenerate_invoice',
                 'module' => 'billing',
                 'description' => "Regenerated invoice {$invoice->invoice_number} for order {$order->order_number} (new total \${$invoice->total})",
@@ -262,6 +264,7 @@ class BillingController extends ApiController
 
             AuditLog::create([
                 'user_id' => $user->id,
+                'branch_id' => $user->branch_id,
                 'action' => 'void_invoice',
                 'module' => 'billing',
                 'description' => "Voided invoice {$invoice->invoice_number} (created by {$creatorName}): {$validated['reason']}",

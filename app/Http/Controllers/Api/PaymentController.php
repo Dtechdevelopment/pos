@@ -102,6 +102,7 @@ class PaymentController extends ApiController
 
             AuditLog::create([
                 'user_id' => $request->user()->id,
+                'branch_id' => $request->user()->branch_id,
                 'action' => 'record_payment',
                 'module' => 'payments',
                 'description' => "Recorded \${$validated['amount']} {$validated['payment_method']} payment on invoice {$invoice->invoice_number}",
@@ -176,6 +177,7 @@ class PaymentController extends ApiController
 
             AuditLog::create([
                 'user_id' => $user->id,
+                'branch_id' => $user->branch_id,
                 'action' => 'reverse_payment',
                 'module' => 'payments',
                 'description' => "Reversed payment #{$payment->id} of \${$payment->amount} on invoice {$invoice->invoice_number}: {$validated['reason']}",
@@ -222,6 +224,7 @@ class PaymentController extends ApiController
 
             AuditLog::create([
                 'user_id' => $user->id,
+                'branch_id' => $user->branch_id,
                 'action' => 'refund_payment',
                 'module' => 'payments',
                 'description' => "Refunded payment #{$payment->id} of \${$payment->amount} on invoice {$invoice->invoice_number}: {$validated['reason']}",
