@@ -52,25 +52,39 @@ class SuperAdminRestaurantController extends ApiController
             'restaurant_name' => 'required|string|max:255',
             'restaurant_address' => 'nullable|string|max:500',
             'restaurant_phone' => 'nullable|string|max:20',
-            'restaurant_email' => 'nullable|email|max:255',
+            'restaurant_email' => 'nullable|max:255',
             'order_method' => 'nullable|string|in:digital,manual',
             'manager_name' => 'required|string|max:255',
             'manager_email' => 'required|email|unique:users,email',
             'manager_password' => 'required|string|min:6',
         ]);
 
+        if (!empty($validated['restaurant_email']) && !filter_var($validated['restaurant_email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->error('Invalid restaurant email format', 422);
+        }
+
+        if (empty($validated['restaurant_email'])) {
+            $validated['restaurant_email'] = null;
+        }
+
         DB::beginTransaction();
 
         try {
-            $branch = Branch::create([
+            $branchData = [
                 'name' => $validated['restaurant_name'],
-                'address' => $validated['restaurant_address'] ?? null,
-                'phone' => $validated['restaurant_phone'] ?? null,
-                'email' => $validated['restaurant_email'] ?? null,
+                'address' => $validated['restaurant_address'] ?: null,
+                'phone' => $validated['restaurant_phone'] ?: null,
+                'email' => $validated['restaurant_email'],
                 'manager_name' => $validated['manager_name'],
                 'status' => 'active',
-                'order_method' => $validated['order_method'] ?? 'manual',
-            ]);
+            ];
+
+            $columns = DB::getSchemaBuilder()->getColumnListing('branches');
+            if (in_array('order_method', $columns)) {
+                $branchData['order_method'] = $validated['order_method'] ?? 'manual';
+            }
+
+            $branch = Branch::create($branchData);
 
             $manager = User::create([
                 'name' => $validated['manager_name'],
@@ -80,7 +94,10 @@ class SuperAdminRestaurantController extends ApiController
                 'status' => 'active',
             ]);
 
-            $manager->assignRole(Role::findOrCreate('manager', 'web'));
+            if (class_exists(Role::class)) {
+                $role = Role::findOrCreate('manager');
+                $manager->assignRole($role);
+            }
 
             $branch->loadCount(['users', 'orders', 'invoices']);
 
