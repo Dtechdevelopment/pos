@@ -12,7 +12,7 @@ class ManagerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::role('manager')->with('branch');
+        $query = User::whereHas('roles', fn($q) => $q->where('name', 'manager'))->with('branch');
 
         if ($request->search) {
             $query->where(function ($q) use ($request) {

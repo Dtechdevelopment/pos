@@ -13,8 +13,8 @@ class DashboardController extends Controller
     {
         $totalRestaurants = Branch::count();
         $activeRestaurants = Branch::where('status', 'active')->count();
-        $totalManagers = User::role('manager')->count();
-        $totalStaff = User::whereHas('role', function ($q) {
+        $totalManagers = User::whereHas('roles', fn($q) => $q->where('name', 'manager'))->count();
+        $totalStaff = User::whereHas('roles', function ($q) {
             $q->whereIn('name', ['waiter', 'kitchen', 'cashier']);
         })->count();
 

@@ -19,7 +19,7 @@ class BranchController extends Controller
 
     public function create()
     {
-        $managers = User::role('manager')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email']);
+        $managers = User::whereHas('roles', fn($q) => $q->where('name', 'manager'))->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email']);
         return view('admin.branches.create', compact('managers'));
     }
 

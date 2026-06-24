@@ -107,7 +107,7 @@ class ReportController extends Controller
 
     public function waiter(Request $request)
     {
-        $query = User::role('waiter')->withCount(['waiterOrders', 'waiterInvoices']);
+        $query = User::whereHas('roles', fn($q) => $q->where('name', 'waiter'))->withCount(['waiterOrders', 'waiterInvoices']);
 
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $query->whereHas('waiterOrders', fn($q) => $q->whereDate('created_at', '>=', $request->date_from)
@@ -195,12 +195,12 @@ class ReportController extends Controller
             'bank_transfer' => $bankPayments,
         ];
 
-        // Per-hour breakdown for chart (MySQL compatible)
+        // Per-hour breakdown for chart (SQLite compatible)
         $hourlyData = collect(range(0, 23))->map(fn($h) => [
             'hour'  => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00',
             'sales' => Invoice::where('status', 'paid')
                 ->whereDate('created_at', $date)
-                ->whereRaw('HOUR(created_at) = ?', [$h])
+                ->whereRaw("strftime('%H', created_at) = ?", [str_pad($h, 2, '0', STR_PAD_LEFT)])
                 ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
                 ->sum('total'),
         ]);

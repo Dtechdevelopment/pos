@@ -90,7 +90,7 @@ class ReportController extends ApiController
         $dateFrom = $request->date_from ?? today()->startOfMonth();
         $dateTo = $request->date_to ?? today();
 
-        $waiters = User::role('waiter')
+        $waiters = User::whereHas('roles', fn($q) => $q->where('name', 'waiter'))
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->get()
             ->map(function ($waiter) use ($dateFrom, $dateTo) {

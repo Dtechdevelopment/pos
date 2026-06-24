@@ -62,7 +62,7 @@ class OrderController extends Controller
     public function edit(Order $order)
     {
         $order->load(['orderItems.menuItem', 'restaurantTable', 'waiter', 'customer']);
-        $waiters = User::role('waiter')->where('status', 'active')->get();
+        $waiters = User::whereHas('roles', fn($q) => $q->where('name', 'waiter'))->where('status', 'active')->get();
         return view('admin.orders.edit', compact('order', 'waiters'));
     }
 

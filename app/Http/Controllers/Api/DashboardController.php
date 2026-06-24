@@ -32,9 +32,9 @@ class DashboardController extends ApiController
             'totalPaymentsCollected' => Payment::where($scope)->whereDate('created_at', $today)->where('status', 'completed')->sum('amount'),
             'pendingPayments' => Invoice::where($scope)->where('status', 'pending')->sum('total'),
             'activeTables' => RestaurantTable::where($scope)->where('status', 'occupied')->count(),
-            'activeWaiters' => User::role('waiter')->where('status', 'active')->when($branchId, fn($q) => $q->where('branch_id', $branchId))->count(),
-            'activeKitchenStaff' => User::role('kitchen_staff')->where('status', 'active')->when($branchId, fn($q) => $q->where('branch_id', $branchId))->count(),
-            'activeCashiers' => User::role('cashier')->where('status', 'active')->when($branchId, fn($q) => $q->where('branch_id', $branchId))->count(),
+            'activeWaiters' => User::whereHas('roles', fn($q) => $q->where('name', 'waiter'))->where('status', 'active')->when($branchId, fn($q) => $q->where('branch_id', $branchId))->count(),
+            'activeKitchenStaff' => User::whereHas('roles', fn($q) => $q->where('name', 'kitchen_staff'))->where('status', 'active')->when($branchId, fn($q) => $q->where('branch_id', $branchId))->count(),
+            'activeCashiers' => User::whereHas('roles', fn($q) => $q->where('name', 'cashier'))->where('status', 'active')->when($branchId, fn($q) => $q->where('branch_id', $branchId))->count(),
             'avgOrderValue' => Order::where($scope)->whereDate('created_at', $today)->avg('total') ?? 0,
             'totalItemsSold' => OrderItem::whereHas('order', fn($q) => $q->where($scope)->whereDate('created_at', $today))->sum('quantity'),
         ];
@@ -73,7 +73,7 @@ class DashboardController extends ApiController
                 ];
             });
 
-        $topWaiters = User::role('waiter')
+        $topWaiters = User::whereHas('roles', fn($q) => $q->where('name', 'waiter'))
             ->withCount(['waiterOrders as orders_count' => fn($q) => $q->whereDate('created_at', $today)])
             ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->get()

@@ -30,9 +30,9 @@ class DashboardController extends Controller
             'pendingPayments' => Invoice::where('status', 'pending')->sum('total'),
             'missingSales' => 0,
             'activeTables' => RestaurantTable::where('status', 'occupied')->count(),
-            'activeWaiters' => User::role('waiter')->where('status', 'active')->count(),
-            'activeKitchenStaff' => User::role('kitchen_staff')->where('status', 'active')->count(),
-            'activeCashiers' => User::role('cashier')->where('status', 'active')->count(),
+            'activeWaiters' => User::whereHas('roles', fn($q) => $q->where('name', 'waiter'))->where('status', 'active')->count(),
+            'activeKitchenStaff' => User::whereHas('roles', fn($q) => $q->where('name', 'kitchen_staff'))->where('status', 'active')->count(),
+            'activeCashiers' => User::whereHas('roles', fn($q) => $q->where('name', 'cashier'))->where('status', 'active')->count(),
             'totalCustomersServed' => Order::whereDate('created_at', $today)->distinct('customer_id')->count('customer_id'),
             'avgOrderValue' => Order::whereDate('created_at', $today)->avg('total') ?? 0,
             'totalItemsSold' => OrderItem::whereHas('order', fn($q) => $q->whereDate('created_at', $today))->sum('quantity'),
@@ -102,7 +102,7 @@ class DashboardController extends Controller
             'data' => $topItems->pluck('qty'),
         ];
 
-        $topWaiters = User::role('waiter')
+        $topWaiters = User::whereHas('roles', fn($q) => $q->where('name', 'waiter'))
             ->withCount(['waiterOrders as orders_count' => fn($q) => $q->whereDate('created_at', $today)])
             ->get()
             ->map(fn($user) => [
