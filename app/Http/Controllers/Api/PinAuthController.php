@@ -14,9 +14,11 @@ class PinAuthController extends ApiController
     {
         $validated = $request->validate([
             'pin' => 'required|string|size:4',
+            'branch_id' => 'nullable|integer|exists:branches,id',
         ]);
 
         $pin = $validated['pin'];
+        $branchId = $validated['branch_id'] ?? null;
         $ip = $request->ip();
         $lockoutKey = 'pin_lockout_' . md5($ip);
 
@@ -25,11 +27,16 @@ class PinAuthController extends ApiController
             return $this->error("Too many failed attempts. Try again in {$remaining} minutes.", 429);
         }
 
-        $users = User::where('pin', $pin)
+        $query = User::where('pin', $pin)
             ->where('status', 'active')
             ->whereNotNull('pin')
-            ->with('branch')
-            ->get();
+            ->with('branch');
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        $users = $query->get();
 
         if ($users->isEmpty()) {
             $this->incrementPinAttempts($ip);
@@ -87,6 +94,7 @@ class PinAuthController extends ApiController
         $validated = $request->validate([
             'pin' => 'required|string|size:4',
             'user_id' => 'required|exists:users,id',
+            'branch_id' => 'nullable|integer|exists:branches,id',
         ]);
 
         $ip = $request->ip();
@@ -97,11 +105,16 @@ class PinAuthController extends ApiController
             return $this->error("Too many failed attempts. Try again in {$remaining} minutes.", 429);
         }
 
-        $user = User::where('id', $validated['user_id'])
+        $query = User::where('id', $validated['user_id'])
             ->where('pin', $validated['pin'])
             ->where('status', 'active')
-            ->with('branch')
-            ->first();
+            ->with('branch');
+
+        if ($validated['branch_id'] ?? null) {
+            $query->where('branch_id', $validated['branch_id']);
+        }
+
+        $user = $query->first();
 
         if (!$user) {
             $this->incrementPinAttempts($ip);
