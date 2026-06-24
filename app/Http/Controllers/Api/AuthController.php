@@ -30,6 +30,12 @@ class AuthController extends ApiController
             return $this->error('Your account has been suspended.', 403);
         }
 
+        if ($user->hasRole('super_admin')) {
+            return $this->error('Super Admin accounts cannot log in to the mobile app. Please use the web dashboard at nespos.cloud/admin.', 403);
+        }
+
+        $hasPin = !empty($user->pin);
+
         $token = $user->createToken('mobile-app')->plainTextToken;
 
         $user->last_login_at = now();
@@ -55,6 +61,7 @@ class AuthController extends ApiController
                     'address' => $user->branch->address,
                 ] : null,
                 'roles' => $roles,
+                'has_pin' => $hasPin,
             ],
             'token' => $token,
         ], 'Login successful');

@@ -19,11 +19,25 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\TableController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
+use App\Http\Controllers\SuperAdmin\RestaurantController as SuperAdminRestaurantController;
+use App\Http\Controllers\SuperAdmin\ManagerController as SuperAdminManagerController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
 });
+
+Route::middleware(['auth', 'verified'])->prefix('super-admin')->name('super_admin.')->group(function () {
+    Route::get('/', fn() => redirect()->route('super_admin.dashboard'));
+    Route::get('/dashboard', [SuperAdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('restaurants/{restaurant}/toggle-status', [SuperAdminRestaurantController::class, 'toggleStatus'])->name('restaurants.toggle-status');
+    Route::resource('restaurants', SuperAdminRestaurantController::class);
+
+    Route::post('managers/{manager}/reset-password', [SuperAdminManagerController::class, 'resetPassword'])->name('managers.reset-password');
+    Route::resource('managers', SuperAdminManagerController::class);
+})->middleware('role:super_admin');
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
