@@ -12,11 +12,14 @@ use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\PinAuthController;
 use App\Http\Controllers\Api\SuperAdminRestaurantController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/pin-login', [PinAuthController::class, 'pinLogin']);
+Route::post('/pin-login/ambiguous', [PinAuthController::class, 'pinLoginAmbiguous']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -100,6 +103,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/users/{user}', [UserController::class, 'update']);
     Route::delete('/users/{user}', [UserController::class, 'destroy']);
     Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
+
+    // PIN Management
+    Route::post('/pin/set', [PinAuthController::class, 'setPin']);
+    Route::post('/pin/set/{user}', [PinAuthController::class, 'setPinForUser']);
+    Route::post('/pin/clear/{user}', [PinAuthController::class, 'clearPin']);
 
     // Audit Logs
     Route::get('/audit-logs', [AuditController::class, 'index']);

@@ -14,19 +14,20 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'pin'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'phone', 'status', 'branch_id', 'last_login_at', 'last_login_ip'];
+    protected $fillable = ['name', 'email', 'password', 'phone', 'status', 'branch_id', 'pin', 'pin_set_at', 'last_login_at', 'last_login_ip'];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'pin_set_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

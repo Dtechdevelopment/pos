@@ -61,7 +61,17 @@ class UserController extends ApiController
             'branch_id' => 'nullable|exists:branches,id',
             'role' => 'required|string|in:' . implode(',', $allowedRoles),
             'status' => 'nullable|string|in:active,inactive',
+            'pin' => 'nullable|string|size:4|digits:4',
         ]);
+
+        if (!empty($validated['pin'])) {
+            $existing = User::where('pin', $validated['pin'])
+                ->where('branch_id', $request->user()->branch_id)
+                ->first();
+            if ($existing) {
+                return $this->error('This PIN is already used by another staff member in this restaurant.', 422);
+            }
+        }
 
         DB::beginTransaction();
 
@@ -72,14 +82,21 @@ class UserController extends ApiController
                 $branchId = $request->user()->branch_id;
             }
 
-            $user = User::create([
+            $userData = [
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => $validated['password'],
                 'phone' => $validated['phone'] ?? null,
                 'branch_id' => $branchId,
                 'status' => $validated['status'] ?? 'active',
-            ]);
+            ];
+
+            if (!empty($validated['pin'])) {
+                $userData['pin'] = $validated['pin'];
+                $userData['pin_set_at'] = now();
+            }
+
+            $user = User::create($userData);
 
             $user->assignRole($validated['role']);
 
