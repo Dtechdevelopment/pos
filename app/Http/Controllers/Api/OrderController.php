@@ -62,6 +62,12 @@ class OrderController extends ApiController
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
+        if ($request->boolean('has_pending_invoice')) {
+            $query->whereHas('invoice', function ($q) {
+                $q->whereIn('status', ['pending', 'partial']);
+            });
+        }
+
         $query->latest();
 
         return $this->paginated($query);
@@ -96,7 +102,8 @@ class OrderController extends ApiController
 
         try {
             $waiterName = $this->sanitizeName($request->user()->name ?? 'WAITER');
-            $orderNumber = 'ORD-' . $waiterName . '-' . strtoupper(Str::random(4));
+            $tableNumber = $this->sanitizeName($table->table_number ?? '0');
+            $orderNumber = 'ORD-T' . $tableNumber . '-' . $waiterName . '-' . strtoupper(Str::random(4));
 
             $subtotal = 0;
             $tax = 0;
