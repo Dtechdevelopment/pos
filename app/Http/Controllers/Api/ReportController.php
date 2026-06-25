@@ -454,7 +454,6 @@ class ReportController extends ApiController
             'items' => $items,
         ]);
     }
-}
 
     public function financial(Request $request): JsonResponse
     {
