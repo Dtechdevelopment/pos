@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class RestaurantController extends Controller
 {
@@ -54,12 +53,12 @@ class RestaurantController extends Controller
             ->with('success', 'Restaurant created successfully.');
     }
 
-    public function edit(Branch $branch)
+    public function edit(Branch $restaurant)
     {
-        return view('super_admin.restaurants.edit', compact('branch'));
+        return view('super_admin.restaurants.edit', ['branch' => $restaurant]);
     }
 
-    public function update(Request $request, Branch $branch)
+    public function update(Request $request, Branch $restaurant)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -71,24 +70,24 @@ class RestaurantController extends Controller
             'order_method' => 'required|in:digital,manual',
         ]);
 
-        $branch->update($validated);
+        $restaurant->update($validated);
 
         return redirect()->route('super_admin.restaurants.index')
             ->with('success', 'Restaurant updated successfully.');
     }
 
-    public function destroy(Branch $branch)
+    public function destroy(Branch $restaurant)
     {
-        $branch->delete();
+        $restaurant->delete();
         return redirect()->route('super_admin.restaurants.index')
             ->with('success', 'Restaurant deleted successfully.');
     }
 
-    public function toggleStatus(Branch $branch)
+    public function toggleStatus(Branch $restaurant)
     {
-        $branch->status = $branch->status === 'active' ? 'inactive' : 'active';
-        $branch->save();
+        $restaurant->status = $restaurant->status === 'active' ? 'inactive' : 'active';
+        $restaurant->save();
 
-        return back()->with('success', "Restaurant {$branch->status}.");
+        return back()->with('success', "Restaurant {$restaurant->status}.");
     }
 }

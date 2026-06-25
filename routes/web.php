@@ -33,10 +33,10 @@ Route::middleware(['auth', 'verified'])->prefix('super-admin')->name('super_admi
     Route::get('/dashboard', [SuperAdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('restaurants/{restaurant}/toggle-status', [SuperAdminRestaurantController::class, 'toggleStatus'])->name('restaurants.toggle-status');
-    Route::resource('restaurants', SuperAdminRestaurantController::class);
+    Route::resource('restaurants', SuperAdminRestaurantController::class)->parameters(['restaurants' => 'restaurant']);
 
     Route::post('managers/{manager}/reset-password', [SuperAdminManagerController::class, 'resetPassword'])->name('managers.reset-password');
-    Route::resource('managers', SuperAdminManagerController::class);
+    Route::resource('managers', SuperAdminManagerController::class)->parameters(['managers' => 'manager']);
 })->middleware('role:super_admin');
 
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
