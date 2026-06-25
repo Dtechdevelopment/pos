@@ -36,7 +36,7 @@
          class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
 
     {{-- Sidebar --}}
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    <aside x-cloak :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
            class="fixed inset-y-0 left-0 z-50 w-[260px] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0"
            style="background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);">
 
