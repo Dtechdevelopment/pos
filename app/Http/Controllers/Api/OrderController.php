@@ -207,10 +207,7 @@ class OrderController extends ApiController
             return $this->error('Cannot add items to a closed or cancelled order.', 422);
         }
 
-        $invoice = $order->invoice;
-        if ($invoice && $invoice->status === 'paid' && $order->status === 'closed') {
-            return $this->error('Cannot add items — order is closed and paid.', 422);
-        }
+        $previousStatus = $order->status;
 
         DB::beginTransaction();
 
@@ -249,13 +246,41 @@ class OrderController extends ApiController
             $order->subtotal = $newSubtotal;
             $order->tax = $newTax;
             $order->total = $newSubtotal + $newTax - $order->discount;
+
             $branch = $order->branch;
             $isManual = ($branch && $branch->order_method === 'manual');
-            $order->status = $isManual ? 'ready' : 'sent_to_kitchen';
+
+            if ($previousStatus === 'pending') {
+                $order->status = $isManual ? 'ready' : 'sent_to_kitchen';
+            }
+
             $order->save();
 
-            if ($isManual) {
+            if ($isManual && $previousStatus === 'pending') {
                 $order->kitchenOrders()->where('status', 'pending')->update(['status' => 'ready']);
+            }
+
+            $invoice = $order->invoice;
+            if ($invoice && in_array($invoice->status, ['draft', 'pending', 'partial'])) {
+                $invoice->invoiceItems()->delete();
+
+                foreach ($order->orderItems as $item) {
+                    $invoiceItem = new \App\Models\InvoiceItem();
+                    $invoiceItem->invoice_id = $invoice->id;
+                    $invoiceItem->menu_item_id = $item->menu_item_id;
+                    $invoiceItem->item_name = $item->item_name;
+                    $invoiceItem->quantity = $item->quantity;
+                    $invoiceItem->unit_price = $item->unit_price;
+                    $invoiceItem->subtotal = $item->subtotal;
+                    $invoiceItem->tax = $item->subtotal * ($item->menuItem->tax / 100);
+                    $invoiceItem->save();
+                }
+
+                $invoice->subtotal = $invoice->fresh()->invoiceItems->sum('subtotal');
+                $invoice->tax = $invoice->fresh()->invoiceItems->sum('tax');
+                $invoice->total = $invoice->subtotal - ($invoice->discount ?? 0) + $invoice->tax;
+                $invoice->status = 'pending';
+                $invoice->save();
             }
 
             $order->load(['restaurantTable', 'waiter', 'orderItems.menuItem', 'kitchenOrders']);
