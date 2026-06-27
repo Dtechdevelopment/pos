@@ -7,7 +7,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Branch extends Model
 {
-    protected $fillable = ['name', 'address', 'phone', 'email', 'manager_name', 'status', 'order_method'];
+    protected $fillable = ['name', 'logo_path', 'address', 'phone', 'email', 'manager_name', 'status', 'order_method'];
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (!$this->logo_path) return null;
+        return url('storage/' . $this->logo_path);
+    }
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

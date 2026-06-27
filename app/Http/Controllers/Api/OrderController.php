@@ -301,11 +301,15 @@ class OrderController extends ApiController
             'status' => 'required|in:pending,sent_to_kitchen,preparing,ready,picked_up,delivered,closed,cancelled',
         ]);
 
-        $newStatus = $validated['status'];
-        $order->status = $newStatus;
-        $order->save();
+        try {
+            $newStatus = $validated['status'];
+            $order->status = $newStatus;
+            $order->save();
 
-        return $this->success(null, 'Order status updated');
+            return $this->success(null, 'Order status updated');
+        } catch (\Exception $e) {
+            return $this->error('Failed to update status: ' . $e->getMessage(), 500);
+        }
     }
 
     public function cancel(Request $request, Order $order): JsonResponse

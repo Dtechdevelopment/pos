@@ -160,6 +160,74 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    // Branch Logo
+    Route::post('/settings/logo', function (Request $request) {
+        $user = $request->user();
+        $roles = $user->getRoleNames();
+        if (!$roles->contains('super_admin') && !$roles->contains('manager') && !$roles->contains('admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $branch = $user->branch;
+        if (!$branch) {
+            return response()->json(['message' => 'No branch assigned'], 404);
+        }
+
+        $request->validate([
+            'logo' => 'required|file|mimes:png,jpg,jpeg|max:2048',
+        ]);
+
+        $file = $request->file('logo');
+        $filename = 'branch_' . $branch->id . '_logo.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('branches', $filename, 'public');
+
+        $branch->logo_path = $path;
+        $branch->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logo uploaded successfully',
+            'data' => ['logo_url' => $branch->logo_url],
+        ]);
+    });
+
+    Route::delete('/settings/logo', function (Request $request) {
+        $user = $request->user();
+        $roles = $user->getRoleNames();
+        if (!$roles->contains('super_admin') && !$roles->contains('manager') && !$roles->contains('admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $branch = $user->branch;
+        if (!$branch) {
+            return response()->json(['message' => 'No branch assigned'], 404);
+        }
+
+        if ($branch->logo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($branch->logo_path)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($branch->logo_path);
+        }
+
+        $branch->logo_path = null;
+        $branch->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logo removed',
+        ]);
+    });
+
+    Route::get('/settings/logo', function (Request $request) {
+        $branch = $request->user()->branch;
+        if (!$branch) {
+            return response()->json(['message' => 'No branch assigned'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => ['logo_url' => $branch->logo_url],
+        ]);
+    });
+
     // One-time fix: alter kitchen_orders status enum to include 'picked_up'
     Route::post('/alter-kitchen-status', function () {
         \Illuminate\Support\Facades\DB::statement("ALTER TABLE kitchen_orders MODIFY COLUMN status ENUM('pending','preparing','ready','picked_up','delivered','cancelled') DEFAULT 'pending'");
