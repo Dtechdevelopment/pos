@@ -12,9 +12,11 @@ class Branch extends Model
     public function getLogoUrlAttribute(): ?string
     {
         if (!$this->logo_path) return null;
-        $scheme = request()->getScheme();
-        $host = request()->getHost();
-        return $scheme . '://' . $host . '/storage/' . $this->logo_path;
+        $path = $this->logo_path;
+        if (str_starts_with($path, 'branches/')) {
+            $path = substr($path, 9);
+        }
+        return url('branches/' . $path);
     }
     public function users(): HasMany
     {

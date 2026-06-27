@@ -160,7 +160,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
-    // Branch Logo
+    // Branch Logo — stores directly in public/branches/ (no symlink needed)
     Route::post('/settings/logo', function (Request $request) {
         $user = $request->user();
         $roles = $user->getRoleNames();
@@ -179,9 +179,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
         $file = $request->file('logo');
         $filename = 'branch_' . $branch->id . '_logo.' . $file->getClientOriginalExtension();
-        $path = $file->storeAs('branches', $filename, 'public');
 
-        $branch->logo_path = $path;
+        $dir = public_path('branches');
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $file->move($dir, $filename);
+
+        $branch->logo_path = $filename;
         $branch->save();
 
         return response()->json([
@@ -203,8 +209,11 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['message' => 'No branch assigned'], 404);
         }
 
-        if ($branch->logo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($branch->logo_path)) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($branch->logo_path);
+        if ($branch->logo_path) {
+            $file = public_path('branches/' . $branch->logo_path);
+            if (file_exists($file)) {
+                unlink($file);
+            }
         }
 
         $branch->logo_path = null;
@@ -292,6 +301,31 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['message' => 'order_method column added to branches']);
         }
         return response()->json(['message' => 'order_method column already exists']);
+    });
+
+    // One-time fix: migrate logo files from storage/app/public/branches/ to public/branches/
+    Route::post('/migrate-logos', function () {
+        $branches = \App\Models\Branch::whereNotNull('logo_path')->get();
+        $moved = 0;
+        foreach ($branches as $branch) {
+            $oldPath = $branch->logo_path;
+            $filename = basename($oldPath);
+            $newDir = public_path('branches');
+            if (!is_dir($newDir)) {
+                mkdir($newDir, 0755, true);
+            }
+            $oldFile = storage_path('app/public/' . $oldPath);
+            $newFile = $newDir . '/' . $filename;
+            if (file_exists($oldFile) && !file_exists($newFile)) {
+                copy($oldFile, $newFile);
+            }
+            if (file_exists($newFile)) {
+                $branch->logo_path = $filename;
+                $branch->save();
+                $moved++;
+            }
+        }
+        return response()->json(['message' => "Migrated $moved logo(s)", 'total' => $branches->count()]);
     });
 
     // Super Admin: Restaurant Management
