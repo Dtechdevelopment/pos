@@ -160,24 +160,6 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
-    // Lightweight PIN verification (does NOT create new session token)
-    Route::post('/pin-verify', function (Request $request) {
-        $validated = $request->validate([
-            'pin' => 'required|string|size:4',
-        ]);
-
-        $user = $request->user();
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
-        }
-
-        if ($user->pin === $validated['pin']) {
-            return response()->json(['success' => true, 'message' => 'PIN verified']);
-        }
-
-        return response()->json(['success' => false, 'message' => 'Invalid PIN'], 401);
-    });
-
     // Branch Logo — stores directly in public/branches/ (no symlink needed)
     Route::post('/settings/logo', function (Request $request) {
         $user = $request->user();
