@@ -247,6 +247,21 @@ class PinAuthController extends ApiController
         ], 'PIN verified');
     }
 
+    public function verifySelf(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'pin' => 'required|string|size:4',
+        ]);
+
+        $user = $request->user();
+
+        if ($user->pin !== $validated['pin']) {
+            return $this->error('Invalid PIN.', 401);
+        }
+
+        return $this->success(null, 'PIN verified');
+    }
+
     private function incrementPinAttempts(string $ip): void
     {
         $attemptKey = 'pin_attempts_' . md5($ip);

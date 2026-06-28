@@ -117,6 +117,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/pin/set/{user}', [PinAuthController::class, 'setPinForUser']);
     Route::post('/pin/clear/{user}', [PinAuthController::class, 'clearPin']);
     Route::post('/pin/verify', [PinAuthController::class, 'verifyPin']);
+    Route::post('/pin/verify-self', [PinAuthController::class, 'verifySelf']);
 
     // Audit Logs
     Route::get('/audit-logs', [AuditController::class, 'index']);
