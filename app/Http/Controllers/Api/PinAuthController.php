@@ -223,6 +223,27 @@ class PinAuthController extends ApiController
         return $this->success(null, "PIN cleared for {$user->name}");
     }
 
+    public function verifyPin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'pin' => 'required|string|size:4',
+            'branch_id' => 'required|integer|exists:branches,id',
+        ]);
+
+        $user = User::where('pin', $validated['pin'])
+            ->where('branch_id', $validated['branch_id'])
+            ->where('status', 'active')
+            ->whereNotNull('pin')
+            ->whereHas('roles', fn($q) => $q->where('name', 'waiter'))
+            ->first();
+
+        if (!$user) {
+            return $this->error('Invalid waiter PIN.', 401);
+        }
+
+        return $this->success(null, 'PIN verified');
+    }
+
     private function incrementPinAttempts(string $ip): void
     {
         $attemptKey = 'pin_attempts_' . md5($ip);

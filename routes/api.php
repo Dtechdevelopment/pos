@@ -87,7 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/payments/{payment}/reverse', [PaymentController::class, 'reverse']);
     Route::post('/payments/{payment}/refund', [PaymentController::class, 'refund']);
 
-    // Payment Methods
+    // Payment Methods (dynamic per branch)
     Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
     Route::get('/payment-methods/active', [PaymentMethodController::class, 'active']);
     Route::post('/payment-methods', [PaymentMethodController::class, 'store']);
@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/pin/set', [PinAuthController::class, 'setPin']);
     Route::post('/pin/set/{user}', [PinAuthController::class, 'setPinForUser']);
     Route::post('/pin/clear/{user}', [PinAuthController::class, 'clearPin']);
+    Route::post('/pin/verify', [PinAuthController::class, 'verifyPin']);
 
     // Audit Logs
     Route::get('/audit-logs', [AuditController::class, 'index']);
@@ -334,6 +335,32 @@ Route::middleware('auth:sanctum')->group(function () {
             }
         }
         return response()->json(['message' => "Migrated $moved logo(s)", 'total' => $branches->count()]);
+    });
+
+    // One-time fix: seed default payment methods for existing branches
+    Route::post('/seed-payment-methods', function () {
+        $branches = \App\Models\Branch::all();
+        $defaults = [
+            ['name' => 'Cash', 'slug' => 'cash', 'sort_order' => 1],
+            ['name' => 'M-Pesa', 'slug' => 'm_pesa', 'sort_order' => 2],
+            ['name' => 'Card', 'slug' => 'card', 'sort_order' => 3],
+            ['name' => 'Bank Transfer', 'slug' => 'bank_transfer', 'sort_order' => 4],
+        ];
+        $created = 0;
+        foreach ($branches as $branch) {
+            foreach ($defaults as $def) {
+                $exists = \App\Models\PaymentMethod::where('branch_id', $branch->id)
+                    ->where('slug', $def['slug'])->exists();
+                if (!$exists) {
+                    \App\Models\PaymentMethod::create(array_merge($def, [
+                        'branch_id' => $branch->id,
+                        'is_active' => true,
+                    ]));
+                    $created++;
+                }
+            }
+        }
+        return response()->json(['message' => "Seeded $created payment method(s) for {$branches->count()} branch(es)"]);
     });
 
     // Super Admin: Restaurant Management
