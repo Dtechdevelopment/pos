@@ -241,7 +241,10 @@ class PinAuthController extends ApiController
             return $this->error('Invalid waiter PIN.', 401);
         }
 
-        return $this->success(null, 'PIN verified');
+        return $this->success([
+            'user_id' => $user->id,
+            'name' => $user->name,
+        ], 'PIN verified');
     }
 
     private function incrementPinAttempts(string $ip): void

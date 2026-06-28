@@ -85,6 +85,7 @@ class OrderController extends ApiController
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.notes' => 'nullable|string',
+            'waiter_id' => 'nullable|integer|exists:users,id',
         ]);
 
         $table = \App\Models\RestaurantTable::findOrFail($validated['restaurant_table_id']);
@@ -101,7 +102,9 @@ class OrderController extends ApiController
         DB::beginTransaction();
 
         try {
-            $waiterName = $this->sanitizeName($request->user()->name ?? 'WAITER');
+            $waiterId = $validated['waiter_id'] ?? $request->user()->id;
+            $waiterUser = $validated['waiter_id'] ? \App\Models\User::find($validated['waiter_id']) : $request->user();
+            $waiterName = $this->sanitizeName($waiterUser->name ?? 'WAITER');
             $tableNumber = $this->sanitizeName($table->table_number ?? '0');
             $orderNumber = 'ORD-T' . $tableNumber . '-' . $waiterName . '-' . strtoupper(Str::random(4));
 
@@ -123,7 +126,7 @@ class OrderController extends ApiController
             $order->branch_id = $branchId;
             $order->restaurant_table_id = $validated['restaurant_table_id'];
             $order->guest_count = $validated['guest_count'];
-            $order->waiter_id = $request->user()->id;
+            $order->waiter_id = $waiterId;
             $order->customer_id = $validated['customer_id'] ?? null;
             $order->customer_name = $validated['customer_name'] ?? null;
             $order->subtotal = $subtotal;
