@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\CustomerController;
@@ -85,6 +86,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify']);
     Route::post('/payments/{payment}/reverse', [PaymentController::class, 'reverse']);
     Route::post('/payments/{payment}/refund', [PaymentController::class, 'refund']);
+
+    // Payment Methods
+    Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
+    Route::get('/payment-methods/active', [PaymentMethodController::class, 'active']);
+    Route::post('/payment-methods', [PaymentMethodController::class, 'store']);
+    Route::put('/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'update']);
+    Route::delete('/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'destroy']);
 
     // Cashier
     Route::get('/cashier/tables', [TableController::class, 'cashierTables']);
