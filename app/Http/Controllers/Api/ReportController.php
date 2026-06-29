@@ -8,6 +8,7 @@ use App\Models\KitchenOrder;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\Expense;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -530,6 +531,79 @@ class ReportController extends ApiController
                 'quantity' => $salesQty - $paidQty,
                 'amount' => $salesAmount - $paidAmount,
             ],
+        ]);
+    }
+
+    public function profit(Request $request): JsonResponse
+    {
+        $branchId = $request->user()->branch_id;
+        $dateFrom = $request->date_from ?? today()->startOfMonth();
+        $dateTo = $request->date_to ?? today();
+
+        $scope = fn($q) => $q->when($branchId, fn($q2) => $q2->where('branch_id', $branchId));
+
+        // Revenue: sum of completed payments in period
+        $revenue = Payment::where($scope)
+            ->where('status', 'completed')
+            ->whereDate('created_at', '>=', $dateFrom)
+            ->whereDate('created_at', '<=', $dateTo)
+            ->sum('amount');
+
+        // Expenses: recurring calculation
+        $expenses = Expense::where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->where('start_date', '<=', $dateTo)
+            ->where(function ($q) use ($dateTo) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', $dateFrom);
+            })
+            ->get();
+
+        $periodStart = \Carbon\Carbon::parse($dateFrom);
+        $periodEnd = \Carbon\Carbon::parse($dateTo);
+
+        $totalExpenses = 0;
+        $byCategory = [];
+
+        foreach ($expenses as $expense) {
+            $expenseStart = max($expense->start_date, $periodStart);
+            $expenseEnd = $expense->end_date ? min($expense->end_date, $periodEnd) : $periodEnd;
+
+            if ($expenseStart > $expenseEnd) continue;
+
+            $daysActive = $expenseStart->diffInDays($expenseEnd) + 1;
+
+            switch ($expense->frequency) {
+                case 'daily':
+                    $count = $daysActive;
+                    break;
+                case 'weekly':
+                    $count = $daysActive / 7;
+                    break;
+                case 'monthly':
+                    $count = $expenseStart->diffInMonths($expenseEnd) + ($expenseStart->day <= $expenseEnd->day ? 1 : 0);
+                    break;
+                case 'one_time':
+                    $count = ($expenseStart >= $periodStart && $expenseStart <= $periodEnd) ? 1 : 0;
+                    break;
+                default:
+                    $count = 0;
+            }
+
+            $periodAmount = round($expense->amount * $count, 2);
+            $totalExpenses += $periodAmount;
+            $byCategory[$expense->category] = ($byCategory[$expense->category] ?? 0) + $periodAmount;
+        }
+
+        $profit = round($revenue - $totalExpenses, 2);
+        $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 1) : 0;
+
+        return $this->success([
+            'period' => ['from' => (string) $periodStart->toDateString(), 'to' => (string) $periodEnd->toDateString()],
+            'revenue' => round($revenue, 2),
+            'expenses' => round($totalExpenses, 2),
+            'expenses_by_category' => $byCategory,
+            'profit' => $profit,
+            'profit_margin' => $margin,
         ]);
     }
 }

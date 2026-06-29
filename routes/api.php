@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PaymentMethodController;
+use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\CustomerController;
@@ -94,6 +95,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'update']);
     Route::delete('/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'destroy']);
 
+    // Expenses
+    Route::get('/expenses', [ExpenseController::class, 'index']);
+    Route::post('/expenses', [ExpenseController::class, 'store']);
+    Route::put('/expenses/{expense}', [ExpenseController::class, 'update']);
+    Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy']);
+    Route::get('/expenses/summary', [ExpenseController::class, 'summary']);
+
     // Cashier
     Route::get('/cashier/tables', [TableController::class, 'cashierTables']);
 
@@ -129,6 +137,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/waiter/{type}', [ReportController::class, 'waiterReport']);
     Route::get('/reports/financial', [ReportController::class, 'financial']);
     Route::get('/reports/reconciliation', [ReportController::class, 'reconciliation']);
+    Route::get('/reports/profit', [ReportController::class, 'profit']);
 
     // Settings
     Route::get('/settings', function (Request $request) {
