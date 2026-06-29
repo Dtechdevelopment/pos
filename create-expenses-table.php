@@ -5,15 +5,22 @@
  * Self-deletes after running.
  */
 
-$host = 'localhost';
-$db   = 'u273387727_pos';
-$user = 'u273387727_pos';
-$pass = '5808437052aW@';
-$charset = 'utf8mb4';
-
 header('Content-Type: application/json');
 
 try {
+    // Read credentials from Laravel .env
+    $envPath = dirname(__DIR__) . '/.env';
+    if (!file_exists($envPath)) {
+        throw new Exception('.env file not found at: ' . $envPath);
+    }
+
+    $env = parse_ini_file($envPath);
+    $host = $env['DB_HOST'] ?? 'localhost';
+    $db   = $env['DB_DATABASE'] ?? '';
+    $user = $env['DB_USERNAME'] ?? '';
+    $pass = $env['DB_PASSWORD'] ?? '';
+    $charset = 'utf8mb4';
+
     $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
     $pdo = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -28,14 +35,7 @@ try {
         exit;
     }
 
-    // Check branches table structure
-    $cols = $pdo->query("SHOW COLUMNS FROM branches")->fetchAll(PDO::FETCH_COLUMN);
-    $branchIdType = in_array('id', $cols) ? 'exists' : 'missing';
-
-    // Check users table structure
-    $userCols = $pdo->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
-
-    // Create table without foreign keys first (safer for shared hosting)
+    // Create table without foreign keys (safer for shared hosting)
     $pdo->exec("
         CREATE TABLE expenses (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -57,12 +57,7 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'expenses table created successfully',
-        'branches_cols' => count($cols),
-        'users_cols' => count($userCols),
-    ]);
+    echo json_encode(['success' => true, 'message' => 'expenses table created successfully']);
     unlink(__FILE__);
 
 } catch (PDOException $e) {
