@@ -9,7 +9,7 @@ header('Content-Type: application/json');
 
 try {
     // Read credentials from Laravel .env
-    $envPath = dirname(__DIR__) . '/.env';
+    $envPath = __DIR__ . '/.env';
     if (!file_exists($envPath)) {
         throw new Exception('.env file not found at: ' . $envPath);
     }
