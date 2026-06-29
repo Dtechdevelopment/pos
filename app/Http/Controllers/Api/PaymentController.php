@@ -336,6 +336,11 @@ class PaymentController extends ApiController
             $query->where('branch_id', $branchId);
         }
 
+        $invoiceQuery = Invoice::query();
+        if ($branchId) {
+            $invoiceQuery->where('branch_id', $branchId);
+        }
+
         $today = today();
 
         $totals = [
@@ -344,7 +349,8 @@ class PaymentController extends ApiController
             'this_week' => (clone $query)->whereBetween('created_at', [now()->copy()->startOfWeek(), now()->copy()->endOfWeek()])->where('status', 'completed')->sum('amount'),
             'this_month' => (clone $query)->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->where('status', 'completed')->sum('amount'),
             'total' => (clone $query)->where('status', 'completed')->sum('amount'),
-            'pending' => (clone $query)->where('status', 'pending')->count(),
+            'pending' => (clone $invoiceQuery)->whereIn('status', ['pending', 'partial'])->count(),
+            'pending_amount' => (clone $invoiceQuery)->whereIn('status', ['pending', 'partial'])->sum(DB::raw('total - paid_amount')),
             'refunded' => (clone $query)->where('status', 'refunded')->sum('amount'),
         ];
 
