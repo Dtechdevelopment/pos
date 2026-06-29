@@ -234,11 +234,11 @@ class PinAuthController extends ApiController
             ->where('branch_id', $validated['branch_id'])
             ->where('status', 'active')
             ->whereNotNull('pin')
-            ->whereHas('roles', fn($q) => $q->where('name', 'waiter'))
+            ->whereHas('roles', fn($q) => $q->whereIn('name', ['waiter', 'cashier']))
             ->first();
 
         if (!$user) {
-            return $this->error('Invalid waiter PIN.', 401);
+            return $this->error('Invalid staff PIN.', 401);
         }
 
         return $this->success([

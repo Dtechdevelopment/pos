@@ -43,10 +43,15 @@ class PaymentController extends ApiController
 
     public function store(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (!$user->hasAnyRole(['cashier', 'super_admin', 'admin', 'manager'])) {
+            return $this->error('Only cashiers can collect payments.', 403);
+        }
+
         $validated = $request->validate([
             'invoice_id' => 'required|exists:invoices,id',
             'amount' => 'required|numeric|min:0.01',
-            'payment_method' => 'required|in:cash,m_pesa,card,bank_transfer',
+            'payment_method' => 'required|string|max:50',
             'reference_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
         ]);
@@ -244,11 +249,16 @@ class PaymentController extends ApiController
 
     public function storeCombined(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (!$user->hasAnyRole(['cashier', 'super_admin', 'admin', 'manager'])) {
+            return $this->error('Only cashiers can collect payments.', 403);
+        }
+
         $validated = $request->validate([
             'invoice_ids' => 'required|array|min:1',
             'invoice_ids.*' => 'exists:invoices,id',
             'amount' => 'required|numeric|min:0.01',
-            'payment_method' => 'required|in:cash,m_pesa,card,bank_transfer',
+            'payment_method' => 'required|string|max:50',
             'reference_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
         ]);

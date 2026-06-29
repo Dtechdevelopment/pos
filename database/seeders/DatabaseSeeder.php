@@ -50,7 +50,8 @@ class DatabaseSeeder extends Seeder
 
         $cashier = Role::create(['name' => 'cashier', 'guard_name' => 'web']);
         $cashier->givePermissionTo([
-            'view-bills', 'edit-bills',
+            'create-orders', 'edit-orders', 'view-orders',
+            'create-bills', 'view-bills', 'edit-bills',
             'confirm-payment', 'reverse-payment', 'refund-payment',
         ]);
 
