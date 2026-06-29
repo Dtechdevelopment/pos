@@ -15,7 +15,7 @@ class BillingController extends ApiController
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Invoice::with(['branch', 'customer', 'order', 'order.restaurantTable', 'waiter', 'cashier']);
+        $query = Invoice::with(['branch', 'customer', 'order', 'order.restaurantTable', 'waiter', 'cashier', 'payments']);
 
         $branchId = $request->user()->branch_id;
         if ($branchId) {
