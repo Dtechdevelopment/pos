@@ -41,11 +41,12 @@ class ExpenseController extends ApiController
             'frequency' => 'required|in:daily,weekly,monthly,one_time',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'is_recurring' => 'boolean',
+            'is_recurring' => 'nullable',
         ]);
 
         $validated['branch_id'] = $request->user()->branch_id;
         $validated['created_by'] = $request->user()->id;
+        $validated['is_recurring'] = filter_var($validated['is_recurring'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         // Salaries and rent are always monthly
         if (in_array($validated['category'], ['rent', 'salaries'])) {
@@ -68,13 +69,20 @@ class ExpenseController extends ApiController
             'frequency' => 'sometimes|in:daily,weekly,monthly,one_time',
             'start_date' => 'sometimes|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'is_recurring' => 'boolean',
-            'is_active' => 'boolean',
+            'is_recurring' => 'nullable',
+            'is_active' => 'nullable',
         ]);
 
         // Salaries and rent are always monthly
         if (isset($validated['category']) && in_array($validated['category'], ['rent', 'salaries'])) {
             $validated['frequency'] = 'monthly';
+        }
+
+        if (isset($validated['is_recurring'])) {
+            $validated['is_recurring'] = filter_var($validated['is_recurring'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (isset($validated['is_active'])) {
+            $validated['is_active'] = filter_var($validated['is_active'], FILTER_VALIDATE_BOOLEAN);
         }
 
         $expense->update($validated);
