@@ -14,7 +14,16 @@ try {
         throw new Exception('.env file not found at: ' . $envPath);
     }
 
-    $env = parse_ini_file($envPath);
+    $envContent = file_get_contents($envPath);
+    $env = [];
+    foreach (explode("\n", $envContent) as $line) {
+        $line = trim($line);
+        if (empty($line) || $line[0] === '#') continue;
+        if (strpos($line, '=') === false) continue;
+        [$key, $value] = explode('=', $line, 2);
+        $env[trim($key)] = trim($value, " \t\n\r\0\x0B\"'");
+    }
+
     $host = $env['DB_HOST'] ?? 'localhost';
     $db   = $env['DB_DATABASE'] ?? '';
     $user = $env['DB_USERNAME'] ?? '';
