@@ -8,7 +8,6 @@ use App\Models\KitchenOrder;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
-use App\Models\Expense;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -536,6 +535,10 @@ class ReportController extends ApiController
 
     public function profit(Request $request): JsonResponse
     {
+        if (!class_exists('App\Models\Expense')) {
+            return $this->error('Expenses feature not yet deployed. Run the migration first.', 500);
+        }
+
         $branchId = $request->user()->branch_id;
         $dateFrom = $request->date_from ?? today()->startOfMonth();
         $dateTo = $request->date_to ?? today();
