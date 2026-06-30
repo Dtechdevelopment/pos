@@ -564,7 +564,7 @@ class ReportController extends ApiController
             ->toArray();
 
         // Expenses: recurring calculation
-        $expenses = Expense::where('branch_id', $branchId)
+        $expenses = \App\Models\Expense::where('branch_id', $branchId)
             ->where('is_active', true)
             ->where('start_date', '<=', $dateTo)
             ->where(function ($q) use ($dateTo) {
