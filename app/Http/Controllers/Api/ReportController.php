@@ -661,5 +661,4 @@ class ReportController extends ApiController
             'daily_breakdown' => $dailyBreakdown,
         ]);
     }
-    }
 }
