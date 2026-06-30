@@ -112,14 +112,6 @@ class PaymentMethodController extends ApiController
             return $this->error('Unauthorized', 403);
         }
 
-        $hasPayments = \App\Models\Payment::where('payment_method', $paymentMethod->slug)
-            ->where('branch_id', $branch->id)
-            ->exists();
-
-        if ($hasPayments) {
-            return $this->error('Cannot delete — this method has existing payments. Deactivate it instead.', 422);
-        }
-
         $paymentMethod->delete();
 
         return $this->success(null, 'Payment method deleted');
