@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MenuItem extends Model
 {
-    protected $fillable = ['category_id', 'branch_id', 'name', 'sku', 'description', 'cost_price', 'selling_price', 'tax', 'image', 'is_active', 'is_available'];
+    protected $fillable = ['category_id', 'branch_id', 'name', 'sku', 'description', 'cost_price', 'selling_price', 'tax', 'image', 'is_active', 'is_available', 'icon_type', 'icon_shape', 'icon_color', 'icon_image'];
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

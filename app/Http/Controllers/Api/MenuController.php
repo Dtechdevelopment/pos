@@ -60,6 +60,10 @@ class MenuController extends ApiController
             'image' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean',
             'is_available' => 'nullable|boolean',
+            'icon_type' => 'nullable|string|in:none,shape,image',
+            'icon_shape' => 'nullable|string|max:50',
+            'icon_color' => 'nullable|string|max:20',
+            'icon_image' => 'nullable|string|max:500',
         ]);
 
         $branchId = $request->user()->branch_id;
@@ -76,6 +80,10 @@ class MenuController extends ApiController
         $menuItem->image = $validated['image'] ?? null;
         $menuItem->is_active = $validated['is_active'] ?? true;
         $menuItem->is_available = $validated['is_available'] ?? true;
+        $menuItem->icon_type = $validated['icon_type'] ?? 'none';
+        $menuItem->icon_shape = $validated['icon_shape'] ?? null;
+        $menuItem->icon_color = $validated['icon_color'] ?? null;
+        $menuItem->icon_image = $validated['icon_image'] ?? null;
         $menuItem->save();
 
         $menuItem->load(['category', 'branch']);
@@ -96,6 +104,10 @@ class MenuController extends ApiController
             'image' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean',
             'is_available' => 'nullable|boolean',
+            'icon_type' => 'nullable|string|in:none,shape,image',
+            'icon_shape' => 'nullable|string|max:50',
+            'icon_color' => 'nullable|string|max:20',
+            'icon_image' => 'nullable|string|max:500',
         ]);
 
         if (isset($validated['name'])) $menuItem->name = $validated['name'];
@@ -108,6 +120,10 @@ class MenuController extends ApiController
         if (array_key_exists('image', $validated)) $menuItem->image = $validated['image'];
         if (array_key_exists('is_active', $validated)) $menuItem->is_active = $validated['is_active'];
         if (array_key_exists('is_available', $validated)) $menuItem->is_available = $validated['is_available'];
+        if (array_key_exists('icon_type', $validated)) $menuItem->icon_type = $validated['icon_type'];
+        if (array_key_exists('icon_shape', $validated)) $menuItem->icon_shape = $validated['icon_shape'];
+        if (array_key_exists('icon_color', $validated)) $menuItem->icon_color = $validated['icon_color'];
+        if (array_key_exists('icon_image', $validated)) $menuItem->icon_image = $validated['icon_image'];
         $menuItem->save();
 
         $menuItem->load(['category', 'branch']);
@@ -214,5 +230,30 @@ class MenuController extends ApiController
         $category->delete();
 
         return $this->success(null, 'Category deleted successfully');
+    }
+
+    public function uploadIconImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'icon_image' => 'required|file|image|max:512',
+        ]);
+
+        $branchId = $request->user()->branch_id;
+        if (!$branchId) {
+            return $this->error('No branch assigned', 404);
+        }
+
+        $dir = 'storage/menu-icons/' . $branchId;
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $file = $request->file('icon_image');
+        $filename = 'icon_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+        $file->move($dir, $filename);
+
+        $url = $dir . '/' . $filename;
+
+        return $this->success(['icon_image' => $url], 'Icon image uploaded');
     }
 }

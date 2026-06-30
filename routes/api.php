@@ -37,8 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Menu & Categories
     Route::get('/menu', [MenuController::class, 'index']);
-    Route::get('/menu/{menuItem}', [MenuController::class, 'show']);
     Route::post('/menu', [MenuController::class, 'store']);
+    Route::post('/menu/upload-icon', [MenuController::class, 'uploadIconImage']);
+    Route::get('/menu/{menuItem}', [MenuController::class, 'show']);
     Route::put('/menu/{menuItem}', [MenuController::class, 'update']);
     Route::delete('/menu/{menuItem}', [MenuController::class, 'destroy']);
     Route::post('/menu/{menuItem}/toggle-availability', [MenuController::class, 'toggleAvailability']);
