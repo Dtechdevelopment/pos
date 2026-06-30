@@ -15,6 +15,8 @@ class ExpenseController extends ApiController
         $category = $request->category;
         $frequency = $request->frequency;
         $active = $request->boolean('is_active', true);
+        $dateFrom = $request->date_from;
+        $dateTo = $request->date_to;
 
         $query = Expense::with('creator:id,name')
             ->where('branch_id', $branchId)
@@ -26,10 +28,18 @@ class ExpenseController extends ApiController
         if ($frequency) {
             $query->where('frequency', $frequency);
         }
+        if ($dateFrom) {
+            $query->where('start_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $query->where('start_date', '<=', $dateTo);
+        }
 
-        $expenses = $query->orderByDesc('created_at')->get();
+        $expenses = $query->orderByDesc('start_date')->get();
 
-        return $this->success(['expenses' => $expenses]);
+        $total = $expenses->sum('amount');
+
+        return $this->success(['expenses' => $expenses, 'total' => round($total, 2)]);
     }
 
     public function store(Request $request): JsonResponse
