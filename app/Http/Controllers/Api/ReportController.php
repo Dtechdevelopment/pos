@@ -549,6 +549,17 @@ class ReportController extends ApiController
             ->whereDate('created_at', '<=', $dateTo)
             ->sum('amount');
 
+        // Daily revenue breakdown
+        $dailyRevenue = Payment::where($scope)
+            ->where('status', 'completed')
+            ->whereDate('created_at', '>=', $dateFrom)
+            ->whereDate('created_at', '<=', $dateTo)
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(amount) as total'))
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
         // Expenses: recurring calculation
         $expenses = Expense::where('branch_id', $branchId)
             ->where('is_active', true)
@@ -563,6 +574,7 @@ class ReportController extends ApiController
 
         $totalExpenses = 0;
         $byCategory = [];
+        $expenseItems = [];
 
         foreach ($expenses as $expense) {
             $expenseStart = max($expense->start_date, $periodStart);
@@ -592,18 +604,59 @@ class ReportController extends ApiController
             $periodAmount = round($expense->amount * $count, 2);
             $totalExpenses += $periodAmount;
             $byCategory[$expense->category] = ($byCategory[$expense->category] ?? 0) + $periodAmount;
+
+            $expenseItems[] = [
+                'category' => $expense->category,
+                'description' => $expense->description,
+                'amount' => $expense->amount,
+                'frequency' => $expense->frequency,
+                'is_recurring' => $expense->is_recurring,
+                'period_amount' => $periodAmount,
+            ];
+        }
+
+        // Sort expense items by period_amount descending
+        usort($expenseItems, fn($a, $b) => $b['period_amount'] <=> $a['period_amount']);
+
+        // Daily expense estimate (spread evenly across period)
+        $daysInPeriod = $periodStart->diffInDays($periodEnd) + 1;
+        $dailyExpenseEstimate = $daysInPeriod > 0 ? round($totalExpenses / $daysInPeriod, 2) : 0;
+
+        // Build daily breakdown
+        $dailyBreakdown = [];
+        $cursor = $periodStart->copy();
+        while ($cursor->lte($periodEnd)) {
+            $dateStr = $cursor->toDateString();
+            $dayRevenue = $dailyRevenue[$dateStr] ?? 0;
+            $dailyBreakdown[] = [
+                'date' => $dateStr,
+                'revenue' => round($dayRevenue, 2),
+                'expenses' => $dailyExpenseEstimate,
+                'profit' => round($dayRevenue - $dailyExpenseEstimate, 2),
+            ];
+            $cursor->addDay();
         }
 
         $profit = round($revenue - $totalExpenses, 2);
         $margin = $revenue > 0 ? round(($profit / $revenue) * 100, 1) : 0;
+
+        // Average daily revenue
+        $avgDailyRevenue = $daysInPeriod > 0 ? round($revenue / $daysInPeriod, 2) : 0;
+        $avgDailyProfit = $daysInPeriod > 0 ? round($profit / $daysInPeriod, 2) : 0;
 
         return $this->success([
             'period' => ['from' => (string) $periodStart->toDateString(), 'to' => (string) $periodEnd->toDateString()],
             'revenue' => round($revenue, 2),
             'expenses' => round($totalExpenses, 2),
             'expenses_by_category' => $byCategory,
+            'expense_items' => array_slice($expenseItems, 0, 10),
             'profit' => $profit,
             'profit_margin' => $margin,
+            'days_in_period' => $daysInPeriod,
+            'avg_daily_revenue' => $avgDailyRevenue,
+            'avg_daily_profit' => $avgDailyProfit,
+            'daily_breakdown' => $dailyBreakdown,
         ]);
+    }
     }
 }
