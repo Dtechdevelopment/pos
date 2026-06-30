@@ -567,7 +567,7 @@ class ReportController extends ApiController
         $expenses = \App\Models\Expense::where('branch_id', $branchId)
             ->where('is_active', true)
             ->where('start_date', '<=', $dateTo)
-            ->where(function ($q) use ($dateTo) {
+            ->where(function ($q) use ($dateTo, $dateFrom) {
                 $q->whereNull('end_date')->orWhere('end_date', '>=', $dateFrom);
             })
             ->get();
@@ -580,8 +580,14 @@ class ReportController extends ApiController
         $expenseItems = [];
 
         foreach ($expenses as $expense) {
-            $expenseStart = max($expense->start_date, $periodStart);
-            $expenseEnd = $expense->end_date ? min($expense->end_date, $periodEnd) : $periodEnd;
+            $expStart = \Carbon\Carbon::parse($expense->start_date);
+            $expenseStart = $expStart->gt($periodStart) ? $expStart : $periodStart;
+            if ($expense->end_date) {
+                $expEnd = \Carbon\Carbon::parse($expense->end_date);
+                $expenseEnd = $expEnd->lt($periodEnd) ? $expEnd : $periodEnd;
+            } else {
+                $expenseEnd = $periodEnd;
+            }
 
             if ($expenseStart > $expenseEnd) continue;
 
