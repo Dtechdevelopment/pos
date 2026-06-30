@@ -243,7 +243,7 @@ class MenuController extends ApiController
             return $this->error('No branch assigned', 404);
         }
 
-        $dir = 'storage/menu-icons/' . $branchId;
+        $dir = public_path('menu-icons/' . $branchId);
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
@@ -252,7 +252,7 @@ class MenuController extends ApiController
         $filename = 'icon_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
         $file->move($dir, $filename);
 
-        $url = $dir . '/' . $filename;
+        $url = $request->getSchemeAndHttpHost() . '/menu-icons/' . $branchId . '/' . $filename;
 
         return $this->success(['icon_image' => $url], 'Icon image uploaded');
     }

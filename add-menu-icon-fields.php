@@ -60,18 +60,11 @@ try {
         echo "OK: Added icon_image column\n";
     }
 
-    // Create storage directory for menu icon images
-    $iconDir = __DIR__ . '/storage/menu-icons';
+    // Create public directory for menu icon images (must be web-accessible)
+    $iconDir = __DIR__ . '/public/menu-icons';
     if (!is_dir($iconDir)) {
         mkdir($iconDir, 0755, true);
-        echo "OK: Created storage/menu-icons/ directory\n";
-    }
-
-    // Create .htaccess to serve images
-    $htaccess = $iconDir . '/.htaccess';
-    if (!file_exists($htaccess)) {
-        file_put_contents($htaccess, "Allow from all\n");
-        echo "OK: Created .htaccess for serving images\n";
+        echo "OK: Created public/menu-icons/ directory\n";
     }
 
     echo "\nDone! This script will now self-delete.\n";
