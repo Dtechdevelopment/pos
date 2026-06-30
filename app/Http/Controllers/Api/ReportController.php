@@ -570,23 +570,23 @@ class ReportController extends ApiController
 
             if ($expenseStart > $expenseEnd) continue;
 
-            $daysActive = $expenseStart->diffInDays($expenseEnd) + 1;
-
-            switch ($expense->frequency) {
-                case 'daily':
-                    $count = $daysActive;
-                    break;
-                case 'weekly':
-                    $count = $daysActive / 7;
-                    break;
-                case 'monthly':
-                    $count = $expenseStart->diffInMonths($expenseEnd) + ($expenseStart->day <= $expenseEnd->day ? 1 : 0);
-                    break;
-                case 'one_time':
-                    $count = ($expenseStart >= $periodStart && $expenseStart <= $periodEnd) ? 1 : 0;
-                    break;
-                default:
-                    $count = 0;
+            if ($expense->is_recurring) {
+                $daysActive = $expenseStart->diffInDays($expenseEnd) + 1;
+                switch ($expense->frequency) {
+                    case 'daily':
+                        $count = $daysActive;
+                        break;
+                    case 'weekly':
+                        $count = $daysActive / 7;
+                        break;
+                    case 'monthly':
+                        $count = $expenseStart->diffInMonths($expenseEnd) + ($expenseStart->day <= $expenseEnd->day ? 1 : 0);
+                        break;
+                    default:
+                        $count = 1;
+                }
+            } else {
+                $count = 1;
             }
 
             $periodAmount = round($expense->amount * $count, 2);

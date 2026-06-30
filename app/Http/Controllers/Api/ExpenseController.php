@@ -29,10 +29,20 @@ class ExpenseController extends ApiController
             $query->where('frequency', $frequency);
         }
         if ($dateFrom) {
-            $query->where('start_date', '>=', $dateFrom);
-        }
-        if ($dateTo) {
-            $query->where('start_date', '<=', $dateTo);
+            // For recurring: show if start_date <= dateTo (active in period)
+            // For non-recurring: show if start_date within range
+            $query->where(function ($q) use ($dateFrom, $dateTo) {
+                $q->where('is_recurring', true)
+                  ->where('start_date', '<=', $dateTo)
+                  ->where(function ($q2) use ($dateTo) {
+                      $q2->whereNull('end_date')->orWhere('end_date', '>=', $dateFrom);
+                  })
+                  ->orWhere(function ($q2) use ($dateFrom, $dateTo) {
+                      $q2->where('is_recurring', false)
+                         ->where('start_date', '>=', $dateFrom)
+                         ->where('start_date', '<=', $dateTo);
+                  });
+            });
         }
 
         $expenses = $query->orderByDesc('start_date')->get();
@@ -135,23 +145,25 @@ class ExpenseController extends ApiController
 
             if ($expenseStart > $expenseEnd) continue;
 
-            $daysActive = $expenseStart->diffInDays($expenseEnd) + 1;
-
-            switch ($expense->frequency) {
-                case 'daily':
-                    $count = $daysActive;
-                    break;
-                case 'weekly':
-                    $count = $daysActive / 7;
-                    break;
-                case 'monthly':
-                    $count = $expenseStart->diffInMonths($expenseEnd) + ($expenseStart->day <= $expenseEnd->day ? 1 : 0);
-                    break;
-                case 'one_time':
-                    $count = ($expenseStart >= $periodStart && $expenseStart <= $periodEnd) ? 1 : 0;
-                    break;
-                default:
-                    $count = 0;
+            if ($expense->is_recurring) {
+                // Recurring: multiply by frequency
+                $daysActive = $expenseStart->diffInDays($expenseEnd) + 1;
+                switch ($expense->frequency) {
+                    case 'daily':
+                        $count = $daysActive;
+                        break;
+                    case 'weekly':
+                        $count = $daysActive / 7;
+                        break;
+                    case 'monthly':
+                        $count = $expenseStart->diffInMonths($expenseEnd) + ($expenseStart->day <= $expenseEnd->day ? 1 : 0);
+                        break;
+                    default:
+                        $count = 1;
+                }
+            } else {
+                // Non-recurring: count as single occurrence
+                $count = 1;
             }
 
             $periodAmount = round($expense->amount * $count, 2);
