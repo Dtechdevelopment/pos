@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\BillingController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ExpenseController;
+use App\Http\Controllers\Api\ExpenseCategoryController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\CustomerController;
@@ -97,10 +98,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Expenses
     Route::get('/expenses', [ExpenseController::class, 'index']);
+    Route::get('/expenses/summary', [ExpenseController::class, 'summary']);
     Route::post('/expenses', [ExpenseController::class, 'store']);
     Route::put('/expenses/{expense}', [ExpenseController::class, 'update']);
     Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy']);
-    Route::get('/expenses/summary', [ExpenseController::class, 'summary']);
+
+    // Expense Categories
+    Route::get('/expense-categories', [ExpenseCategoryController::class, 'index']);
+    Route::post('/expense-categories', [ExpenseCategoryController::class, 'store']);
+    Route::put('/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'update']);
+    Route::delete('/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'destroy']);
 
     // Cashier
     Route::get('/cashier/tables', [TableController::class, 'cashierTables']);

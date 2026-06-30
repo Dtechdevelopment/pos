@@ -63,7 +63,7 @@ class ExpenseController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'category' => 'required|in:utilities,supplies,maintenance,rent,salaries,other',
+            'category' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
             'amount' => 'required|numeric|min:0',
             'frequency' => 'required|in:daily,weekly,monthly,one_time',
@@ -76,11 +76,6 @@ class ExpenseController extends ApiController
         $validated['created_by'] = $request->user()->id;
         $validated['is_recurring'] = filter_var($validated['is_recurring'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-        // Salaries and rent are always monthly
-        if (in_array($validated['category'], ['rent', 'salaries'])) {
-            $validated['frequency'] = 'monthly';
-        }
-
         $expense = Expense::create($validated);
 
         return $this->success(['expense' => $expense->load('creator:id,name')], 'Expense created', 201);
@@ -91,7 +86,7 @@ class ExpenseController extends ApiController
         $expense = Expense::where('branch_id', $request->user()->branch_id)->findOrFail($id);
 
         $validated = $request->validate([
-            'category' => 'sometimes|in:utilities,supplies,maintenance,rent,salaries,other',
+            'category' => 'sometimes|string|max:100',
             'description' => 'nullable|string|max:255',
             'amount' => 'sometimes|numeric|min:0',
             'frequency' => 'sometimes|in:daily,weekly,monthly,one_time',
@@ -100,11 +95,6 @@ class ExpenseController extends ApiController
             'is_recurring' => 'nullable',
             'is_active' => 'nullable',
         ]);
-
-        // Salaries and rent are always monthly
-        if (isset($validated['category']) && in_array($validated['category'], ['rent', 'salaries'])) {
-            $validated['frequency'] = 'monthly';
-        }
 
         if (isset($validated['is_recurring'])) {
             $validated['is_recurring'] = filter_var($validated['is_recurring'], FILTER_VALIDATE_BOOLEAN);
