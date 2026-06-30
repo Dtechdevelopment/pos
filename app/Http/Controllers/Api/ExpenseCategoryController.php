@@ -97,8 +97,13 @@ class ExpenseCategoryController extends ApiController
         return $this->success($expenseCategory->fresh(), 'Category updated');
     }
 
-    public function destroy(ExpenseCategory $expenseCategory): JsonResponse
+    public function destroy(Request $request, ExpenseCategory $expenseCategory): JsonResponse
     {
+        $branchId = $request->user()->branch_id;
+        if ($expenseCategory->branch_id !== $branchId) {
+            return $this->error('Unauthorized', 403);
+        }
+
         $expenseCategory->delete();
         return $this->success(null, 'Category deleted');
     }
