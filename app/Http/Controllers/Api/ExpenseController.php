@@ -30,23 +30,8 @@ class ExpenseController extends ApiController
         }
 
         if ($dateFrom && $dateTo) {
-            // Show recurring expenses active during the period
-            $query->where(function ($q) use ($dateFrom, $dateTo) {
-                // Recurring: active if start_date <= period end AND (no end_date OR end_date >= period start)
-                $q->where(function ($q2) use ($dateFrom, $dateTo) {
-                    $q2->where('is_recurring', true)
-                        ->where('start_date', '<=', $dateTo)
-                        ->where(function ($q3) use ($dateFrom) {
-                            $q3->whereNull('end_date')->orWhere('end_date', '>=', $dateFrom);
-                        });
-                });
-                // OR non-recurring: start_date falls within the period
-                $q->orWhere(function ($q2) use ($dateFrom, $dateTo) {
-                    $q2->where('is_recurring', false)
-                        ->where('start_date', '>=', $dateFrom)
-                        ->where('start_date', '<=', $dateTo);
-                });
-            });
+            $query->where('start_date', '>=', $dateFrom)
+                ->where('start_date', '<=', $dateTo);
         } elseif ($dateFrom) {
             $query->where('start_date', '>=', $dateFrom);
         } elseif ($dateTo) {
