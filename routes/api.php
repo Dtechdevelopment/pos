@@ -121,6 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Users
     Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/offline-cache', [UserController::class, 'forOfflineCache']);
     Route::post('/users', [UserController::class, 'store']);
     Route::get('/users/roles', [UserController::class, 'roles']);
     Route::get('/users/{user}', [UserController::class, 'show']);

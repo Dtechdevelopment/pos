@@ -11,6 +11,31 @@ use Illuminate\Support\Str;
 
 class UserController extends ApiController
 {
+    // Return users with PINs for offline caching (authenticated endpoint)
+    public function forOfflineCache(Request $request): JsonResponse
+    {
+        $branchId = $request->user()->branch_id;
+        if (!$branchId) {
+            return $this->error('No branch associated with your account.', 422);
+        }
+
+        $users = User::where('branch_id', $branchId)
+            ->where('status', 'active')
+            ->whereNotNull('pin')
+            ->where('pin', '!=', '')
+            ->get(['id', 'name', 'pin', 'branch_id', 'status'])
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'pin' => $u->pin,
+                'branch_id' => $u->branch_id,
+                'role' => $u->getRoleNames()->first() ?? 'staff',
+                'status' => $u->status,
+            ]);
+
+        return $this->success($users);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = User::with('branch', 'roles');
