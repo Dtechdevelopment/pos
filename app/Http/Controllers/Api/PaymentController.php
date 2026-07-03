@@ -54,7 +54,17 @@ class PaymentController extends ApiController
             'payment_method' => 'required|string|max:50',
             'reference_number' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'local_uuid' => 'nullable|string|max:36',
         ]);
+
+        // Idempotency check: if local_uuid provided, check if already synced
+        if (!empty($validated['local_uuid'])) {
+            $existing = Payment::where('local_uuid', $validated['local_uuid'])->first();
+            if ($existing) {
+                $existing->load(['invoice', 'cashier']);
+                return $this->success($existing, 'Payment already exists', 200);
+            }
+        }
 
         $invoice = Invoice::findOrFail($validated['invoice_id']);
 
@@ -88,6 +98,7 @@ class PaymentController extends ApiController
             $payment->status = 'completed';
             $payment->paid_at = now();
             $payment->notes = $validated['notes'] ?? null;
+            $payment->local_uuid = $validated['local_uuid'] ?? null;
             $payment->save();
 
             $invoice->paid_amount = $paidAmount;

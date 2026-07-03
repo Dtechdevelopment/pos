@@ -89,7 +89,17 @@ class BillingController extends ApiController
             'customer_id' => 'nullable|exists:customers,id',
             'discount' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string',
+            'local_uuid' => 'nullable|string|max:36',
         ]);
+
+        // Idempotency check: if local_uuid provided, check if already synced
+        if (!empty($validated['local_uuid'])) {
+            $existing = Invoice::where('local_uuid', $validated['local_uuid'])->first();
+            if ($existing) {
+                $existing->load(['order', 'invoiceItems.menuItem']);
+                return $this->success($existing, 'Invoice already exists', 200);
+            }
+        }
 
         $order = Order::with(['orderItems.menuItem', 'restaurantTable', 'customer'])->findOrFail($validated['order_id']);
 
@@ -129,6 +139,7 @@ class BillingController extends ApiController
         $invoice->change_amount = 0;
         $invoice->status = 'pending';
         $invoice->notes = $validated['notes'] ?? null;
+        $invoice->local_uuid = $validated['local_uuid'] ?? null;
         $invoice->save();
 
         foreach ($order->orderItems as $item) {

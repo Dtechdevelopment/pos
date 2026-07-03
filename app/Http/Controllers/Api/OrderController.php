@@ -86,7 +86,17 @@ class OrderController extends ApiController
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.notes' => 'nullable|string',
             'waiter_id' => 'nullable|integer|exists:users,id',
+            'local_uuid' => 'nullable|string|max:36',
         ]);
+
+        // Idempotency check: if local_uuid provided, check if already synced
+        if (!empty($validated['local_uuid'])) {
+            $existing = Order::where('local_uuid', $validated['local_uuid'])->first();
+            if ($existing) {
+                $existing->load(['restaurantTable', 'waiter', 'customer', 'orderItems.menuItem']);
+                return $this->success($existing, 'Order already exists', 200);
+            }
+        }
 
         $table = \App\Models\RestaurantTable::findOrFail($validated['restaurant_table_id']);
         $branchId = $table->branch_id ?? $request->user()->branch_id;
@@ -135,6 +145,7 @@ class OrderController extends ApiController
             $order->total = $total;
             $order->status = 'pending';
             $order->notes = $validated['notes'] ?? null;
+            $order->local_uuid = $validated['local_uuid'] ?? null;
             $order->save();
 
             if (!empty($validated['customer_name']) && empty($validated['customer_id'])) {

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
-    protected $fillable = ['order_number', 'branch_id', 'restaurant_table_id', 'guest_count', 'waiter_id', 'customer_id', 'customer_name', 'subtotal', 'tax', 'discount', 'total', 'status', 'notes'];
+    protected $fillable = ['order_number', 'branch_id', 'restaurant_table_id', 'guest_count', 'waiter_id', 'customer_id', 'customer_name', 'subtotal', 'tax', 'discount', 'total', 'status', 'notes', 'local_uuid'];
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
