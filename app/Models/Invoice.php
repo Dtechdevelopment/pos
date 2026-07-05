@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model
 {
-    protected $fillable = ['invoice_number', 'order_id', 'branch_id', 'waiter_id', 'cashier_id', 'customer_id', 'subtotal', 'tax', 'discount', 'total', 'paid_amount', 'change_amount', 'status', 'notes', 'local_uuid'];
+    protected $fillable = ['invoice_number', 'order_id', 'branch_id', 'waiter_id', 'cashier_id', 'customer_id', 'subtotal', 'tax', 'discount', 'total', 'paid_amount', 'change_amount', 'status', 'notes'];
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
