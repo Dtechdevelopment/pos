@@ -336,17 +336,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['message' => 'order_method column already exists']);
     });
 
-    // One-time fix: change expenses.category from ENUM to VARCHAR
-    Route::post('/fix-expenses-category', function () {
-        $columns = \Illuminate\Support\Facades\DB::getSchemaBuilder()->getColumnListing('expenses');
-        if (in_array('category', $columns)) {
-            \Illuminate\Support\Facades\DB::statement("ALTER TABLE expenses MODIFY COLUMN category VARCHAR(100) NOT NULL");
-            return response()->json(['message' => 'expenses.category changed to VARCHAR(100)']);
-        }
-        return response()->json(['message' => 'expenses table not found']);
-    });
-
-    // One-time fix: migrate logo files from storage/app/public/branches/ to public/branches/
+    // Super Admin: Restaurant Management
     Route::post('/migrate-logos', function () {
         $branches = \App\Models\Branch::whereNotNull('logo_path')->get();
         $moved = 0;
@@ -405,4 +395,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'update']);
     Route::post('/admin/restaurants/{restaurant}/toggle-status', [SuperAdminRestaurantController::class, 'toggleStatus']);
     Route::delete('/admin/restaurants/{restaurant}', [SuperAdminRestaurantController::class, 'destroy']);
+});
+
+// One-time fix: change expenses.category from ENUM to VARCHAR (no auth required)
+Route::post('/fix-expenses-category', function () {
+    $columns = \Illuminate\Support\Facades\DB::getSchemaBuilder()->getColumnListing('expenses');
+    if (in_array('category', $columns)) {
+        \Illuminate\Support\Facades\DB::statement("ALTER TABLE expenses MODIFY COLUMN category VARCHAR(100) NOT NULL");
+        return response()->json(['message' => 'expenses.category changed to VARCHAR(100)']);
+    }
+    return response()->json(['message' => 'expenses table not found']);
 });
