@@ -47,7 +47,7 @@ class UserController extends ApiController
 
     public function store(Request $request): JsonResponse
     {
-        $allowedRoles = ['manager', 'waiter', 'kitchen', 'cashier'];
+        $allowedRoles = ['manager', 'waiter', 'kitchen_staff', 'cashier'];
         if ($request->user()->hasRole('super_admin')) {
             $allowedRoles[] = 'admin';
             $allowedRoles[] = 'super_admin';
@@ -126,7 +126,7 @@ class UserController extends ApiController
             return $this->error('Unauthorized', 403);
         }
 
-        $allowedRoles = ['manager', 'waiter', 'kitchen', 'cashier'];
+        $allowedRoles = ['manager', 'waiter', 'kitchen_staff', 'cashier'];
         if ($request->user()->hasRole('super_admin')) {
             $allowedRoles[] = 'admin';
             $allowedRoles[] = 'super_admin';
@@ -208,7 +208,7 @@ class UserController extends ApiController
 
     public function roles(): JsonResponse
     {
-        $roles = ['super_admin', 'admin', 'manager', 'waiter', 'kitchen', 'cashier'];
+        $roles = ['super_admin', 'admin', 'manager', 'waiter', 'kitchen_staff', 'cashier'];
         return $this->success($roles);
     }
 }
