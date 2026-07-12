@@ -657,7 +657,7 @@ class ReportController extends ApiController
             'period' => ['from' => (string) $periodStart->toDateString(), 'to' => (string) $periodEnd->toDateString()],
             'revenue' => round($revenue, 2),
             'expenses' => round($totalExpenses, 2),
-            'expenses_by_category' => $byCategory,
+            'expenses_by_category' => (object) $byCategory,
             'expense_items' => array_slice($expenseItems, 0, 10),
             'profit' => $profit,
             'profit_margin' => $margin,
