@@ -40,7 +40,7 @@ class PinAuthController extends ApiController
 
         if ($users->isEmpty()) {
             $this->incrementPinAttempts($ip);
-            return $this->error('Invalid PIN.', 401);
+            return $this->error('Invalid PIN.', 422);
         }
 
         $attemptKey = 'pin_attempts_' . md5($ip);
@@ -118,7 +118,7 @@ class PinAuthController extends ApiController
 
         if (!$user) {
             $this->incrementPinAttempts($ip);
-            return $this->error('Invalid selection.', 401);
+            return $this->error('Invalid selection.', 422);
         }
 
         $attemptKey = 'pin_attempts_' . md5($ip);
@@ -238,7 +238,7 @@ class PinAuthController extends ApiController
             ->first();
 
         if (!$user) {
-            return $this->error('Invalid staff PIN.', 401);
+            return $this->error('Invalid staff PIN.', 422);
         }
 
         return $this->success([
@@ -256,7 +256,7 @@ class PinAuthController extends ApiController
         $user = $request->user();
 
         if ($user->pin !== $validated['pin']) {
-            return $this->error('Invalid PIN.', 401);
+            return $this->error('Invalid PIN.', 422);
         }
 
         return $this->success(null, 'PIN verified');
