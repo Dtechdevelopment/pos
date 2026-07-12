@@ -177,6 +177,11 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['message' => 'No branch assigned'], 404);
         }
 
+        $columns = DB::getSchemaBuilder()->getColumnListing('branches');
+        if (!in_array('order_method', $columns)) {
+            DB::statement("ALTER TABLE branches ADD COLUMN order_method VARCHAR(10) NOT NULL DEFAULT 'digital' AFTER status");
+        }
+
         $branch->order_method = $validated['order_method'];
         $branch->save();
 
