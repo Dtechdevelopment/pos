@@ -316,17 +316,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['message' => 'guest_count column already exists']);
     });
 
-    // One-time fix: add is_addon column to kitchen_orders table
-    Route::post('/add-addon-column', function () {
-        $columns = \Illuminate\Support\Facades\DB::getSchemaBuilder()->getColumnListing('kitchen_orders');
-        if (!in_array('is_addon', $columns)) {
-            \Illuminate\Support\Facades\DB::statement("ALTER TABLE kitchen_orders ADD COLUMN is_addon TINYINT(1) NOT NULL DEFAULT 0 AFTER notes");
-            return response()->json(['message' => 'is_addon column added to kitchen_orders']);
-        }
-        return response()->json(['message' => 'is_addon column already exists']);
-    });
-
-    // One-time fix: add order_method column to branches table
+    // Super Admin: Restaurant Management
     Route::post('/add-order-method', function () {
         $columns = \Illuminate\Support\Facades\DB::getSchemaBuilder()->getColumnListing('branches');
         if (!in_array('order_method', $columns)) {
@@ -405,4 +395,14 @@ Route::post('/fix-expenses-category', function () {
         return response()->json(['message' => 'expenses.category changed to VARCHAR(100)']);
     }
     return response()->json(['message' => 'expenses table not found']);
+});
+
+// One-time fix: add is_addon column to kitchen_orders table (no auth required)
+Route::post('/add-addon-column', function () {
+    $columns = \Illuminate\Support\Facades\DB::getSchemaBuilder()->getColumnListing('kitchen_orders');
+    if (!in_array('is_addon', $columns)) {
+        \Illuminate\Support\Facades\DB::statement("ALTER TABLE kitchen_orders ADD COLUMN is_addon TINYINT(1) NOT NULL DEFAULT 0 AFTER notes");
+        return response()->json(['message' => 'is_addon column added to kitchen_orders']);
+    }
+    return response()->json(['message' => 'is_addon column already exists']);
 });

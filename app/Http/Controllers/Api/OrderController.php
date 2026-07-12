@@ -210,6 +210,11 @@ class OrderController extends ApiController
             return $this->error('Cannot add items to a closed or cancelled order.', 422);
         }
 
+        $paidInvoice = $order->invoices()->where('status', 'paid')->exists();
+        if ($paidInvoice) {
+            return $this->error('Cannot add items to a paid order.', 422);
+        }
+
         $previousStatus = $order->status;
 
         DB::beginTransaction();
