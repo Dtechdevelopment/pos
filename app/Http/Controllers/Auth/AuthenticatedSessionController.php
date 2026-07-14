@@ -28,7 +28,14 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('super_admin.dashboard', absolute: false));
+        $user = $request->user();
+        if ($user->hasRole('super_admin')) {
+            return redirect()->intended(route('super_admin.dashboard', absolute: false));
+        }
+
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        abort(403, 'Your role does not have web dashboard access. Use the mobile app.');
     }
 
     /**
