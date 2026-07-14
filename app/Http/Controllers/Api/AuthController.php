@@ -31,7 +31,7 @@ class AuthController extends ApiController
         }
 
         if ($user->hasRole('super_admin')) {
-            return $this->error('Super Admin accounts cannot log in to the mobile app. Please use the web dashboard at nespos.cloud/admin.', 403);
+            return $this->error('Super Admin accounts cannot log in to the mobile app. Please use the web dashboard at nespos.cloud/super-admin.', 403);
         }
 
         $hasPin = !empty($user->pin);
