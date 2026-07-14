@@ -8,13 +8,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    if (!Auth::check()) {
-        return redirect()->route('login');
-    }
-    if (Auth::user()->hasRole('super_admin')) {
+    if (Auth::check() && Auth::user()->hasRole('super_admin')) {
         return redirect()->route('super_admin.dashboard');
     }
-    abort(403, 'Your role does not have web dashboard access. Use the mobile app.');
+    return redirect()->route('login');
 });
 
 Route::middleware(['auth', 'verified', 'role:super_admin'])->prefix('super-admin')->name('super_admin.')->group(function () {
